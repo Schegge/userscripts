@@ -31,14 +31,14 @@
 
 (function($) {  
 
-    // DEBUGGING /////////////////////////////////////////////////////////////////////////////
+    /*/ DEBUGGING /////////////////////////////////////////////////////////////////////////////
     function debugging(varName, variable, parents) {
         var message = "{BLACKLIST} [" + varName + "]";
         if ( variable !== undefined ) message += " (" + typeof variable + ") " + variable;
         console.log( message );            
         if ( parents !== undefined ) console.log( $(parents).parents() );
     }
-    //////////////////////////////////////////////////////////////////////////////////////////
+    /*/////////////////////////////////////////////////////////////////////////////////////////
 
     // get black/whitelist saved
     var sBL, sWL, ytblacklist, ytwhitelist;    
@@ -114,10 +114,10 @@
     $suspend = $("<div id='yt-blacklist-suspend' style='cursor: pointer; font-size: 70%; opacity: .5; text-align: right; padding-top: 5px'> suspend block </div>");
     $saved = $('<span style="margin-right: 7px; font-size: 80%"> saved and searched again </span>');
     $divInput
-    .append($saveDiv)
-    .append($textareaWL)
-    .append($textareaBL)    
-    .append($suspend);
+        .append($saveDiv)
+        .append($textareaWL)
+        .append($textareaBL)    
+        .append($suspend);
     $("body").append($divInput);
 
     // open and close textareas
@@ -178,27 +178,25 @@
     function findMatch(s) {
         $(s).each(function() {
             var username = $(this).text().trim().toLowerCase();
-            //debugging(username + " parents", undefined, this);
-            if ( username ) {
+            //debugging(username + " | parents:", undefined, this);
+            if ( !username ) return 'continue';
 
-                if ( ifMatch(username) ) { // if the username is blacklisted
-                    if ( $(this).parents("#watch-header").length ) { // WATCH VIDEO
-                        if ( !$(this).siblings(".span-is-black").length ) { // check if it wasn't already blacklisted
-                            $(".yt-user-info").append("<span class=\"span-is-black\" style=\"color:rgb(204, 24, 30);font-weight:500\">BLACKLISTED!</span>");
-                        }
-                    } else if ( $(this).parents("tr.pl-video").length ) { // PLAYLIST (not the 'dark' ones)
-                        if ( !$(this).parents(".tr-is-black").length ) {
-                            $(this).closest("tr").addClass("tr-is-black").hide();
-                        }
-                    } else { // SEARCH, RECOMMENDED, etc...
-                        if ( !$(this).parents(".li-is-black").length ) {
-                            $(this).closest("li").addClass("li-is-black").hide();
-                        }
-                    }                
-                } else { // if a previous black/whitelist word is deleted/added
-                    suspend(this);
-                }
-                
+            if ( ifMatch(username) ) { // if the username is blacklisted
+                if ( $(this).parents("#watch-header").length ) { // WATCH VIDEO
+                    if ( !$(this).siblings(".span-is-black").length ) { // check if it wasn't already blacklisted
+                        $(".yt-user-info").append("<span class=\"span-is-black\" style=\"color:rgb(204, 24, 30);font-weight:500\">BLACKLISTED!</span>");
+                    }
+                } else if ( $(this).parents("tr.pl-video").length ) { // PLAYLIST (not the 'dark' ones)
+                    if ( !$(this).parents(".tr-is-black").length ) {
+                        $(this).closest("tr").addClass("tr-is-black").hide();
+                    }
+                } else { // SEARCH, RECOMMENDED, etc...
+                    if ( !$(this).parents(".li-is-black").length ) {
+                        $(this).closest("li").addClass("li-is-black").hide();
+                    }
+                }                
+            } else { // if a previous black/whitelist word is deleted/added
+                suspend(this);
             }
         });
     }
