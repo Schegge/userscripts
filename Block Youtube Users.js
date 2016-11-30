@@ -127,7 +127,7 @@
                     if (!$(this).parents(".li-is-black").length) {
                         $(this).closest("li").addClass("li-is-black").hide();
                     }
-                }                
+                }
             } else { // if a previous black/whitelist word is deleted/added
                 suspend(this);
             }
@@ -175,9 +175,7 @@
     $('#yt-blacklist-research').on('click', search);
     $('#yt-blacklist-suspend').on('click', function() {
         for (var i = 0; i < uClasses.length; i++) {
-            $(uClasses[i]).each(function() {
-                suspend(this);
-            });
+            suspend($(uClasses[i]));
         }
     });
 
