@@ -3,7 +3,7 @@
 // @author       Schegge
 // @namespace    https://github.com/Schegge
 // @description  Prevent from seeing videos by certain users (from recommended, search, related channels...)
-// @version      2.1.9
+// @version      2.2
 // @match        *://www.youtube.com/*
 // @exclude      *://www.youtube.com/embed/*
 // @require      https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js
@@ -16,33 +16,37 @@
   →  the program is case-insensitive
   →  you can choose the symbol to split the usernames (default is a comma) ('*' not allowed) (max 1 character)
   →  put a * in front of a word for wildcard (only in the blacklist!), it will find the word no matter its position in the username (example: *vevo)
-  →  it also hides videos from the playlists/mixes, but it doesn't prevent them from playing if the playlist is in autoplay (download another script that disables autoplay!)
-  →  ☆ force a new search (in case of problems?)
-  →  you can suspend temporarily the block (to reactivate it just click on the star/save or refresh the page)
+  →  you can enable/disable to blacklist channels by clicking on '[x]' before the usernames
+  →  you can suspend temporarily the block (to reactivate it just click on save or ☆ or refresh the page)
+  →  it also hides videos from the playlists/mixes, but it doesn't prevent them from playing if the playlist is in autoplay
 
-  <!> please report any bugs
+ <!> please report any bugs
+ (tested on chrome 55 and firefox 50)
 ***/
 
 (function($) {
 
     // get black/whitelist saved
-    var sBL, sWL, sep, ytblacklist, ytwhitelist;
+    var sBL, sWL, sep, add, ytblacklist, ytwhitelist;
     function getValues() {
         sBL = GM_getValue('savedblocks', 'it is case-insensitive, split the usernames with a comma (default), put a * in front of a word for wildcard, it will find the word no matter its position in the username');
         sWL = GM_getValue('savedwhites', 'write here whitelisted usernames, if for example you blacklist *vevo, but you want to see IndilaVEVO');
         sep = GM_getValue('sep', ',');
+        add = GM_getValue('enableadd', '');
         ytblacklist = sBL.split(sep);
         ytwhitelist = sWL.split(sep);
     }
     getValues();
 
     // where the usernames are
-    var uClasses = ['.g-hovercard', '.branded-page-related-channels-list .yt-uix-tile-link', '.branded-page-module-title-text', '.video-uploader-byline'];
+    //                                         related channels                                         playlist/mixes
+    var uClasses = ['#content .g-hovercard', '.branded-page-related-channels-list .yt-uix-tile-link', '.video-uploader-byline'];
 
     // elements for user input
     var margintop = $('#yt-masthead-container').height() + parseInt($('#yt-masthead-container').css('padding-top')) + parseInt($('#yt-masthead-container').css('padding-bottom'));
 
     $('head').append('<style> ' +
+                     'li.li-is-black, tr.tr-is-black { display: none!important; } ' +
                      '#yt-blacklist { cursor: pointer; margin-right: 2px; font-size: 22px; vertical-align: middle; } ' +
                      '#yt-blacklist-research { cursor: pointer; font-size: 12px; vertical-align: top; margin-right: 5px; } ' +
                      '#yt-blacklist-options { width: 500px; display: flex; flex-flow: row wrap; align-items: baseline; position: fixed; right: 70px; top:' + margintop + 'px; padding: 0 20px 15px; background-color: #fff; box-shadow: 0 1px 1px 0 rgba(0,0,0,.1); border: 1px solid #e8e8e8; border-top: 0; z-index: 9999999999; } ' +
@@ -52,9 +56,11 @@
                      '#yt-blacklist-options .textarea.wl { width: 45%; } ' +
                      '#yt-blacklist-options .textarea.bl { width: 55%; } ' +
                      '#saveblacklist { cursor: pointer; color: #cc181e; text-shadow: 1px 1px 1px rgba(0, 0, 0, .25); border-radius: 2px; } ' +
-                     '.yt-blacklist-sep { width: 50%; font-size: 9px; color: rgba(0,0,0,.5); } ' +
+                     '.yt-blacklist-sep { width: 33%; font-size: 9px; color: rgba(0,0,0,.5); } ' +
                      '#sep-symbol { width: 10px; background: #fff; border: 1px dotted rgba(0,0,0,.13); padding: 0 2px; color: #000; } ' +
-                     '#yt-blacklist-suspend { width: 50%; cursor: pointer; font-size: 70%; color: rgba(0,0,0,.5); text-align: right; } ' +
+                     '#yt-blacklist-suspend { width: 33%; cursor: pointer; font-size: 70%; color: rgba(0,0,0,.5); text-align: right; } ' +
+                     '#yt-blacklist-enableadd { width: 33%; cursor: pointer; font-size: 70%; color: rgba(0,0,0,.5); text-align: center; } ' +
+                     '.yt-blacklist-add { margin-right: .5em; cursor: pointer; color: #cc181e; font-size: 70%; font-family: consolas, monospace; vertical-align: top; }' +
                      '</style>');
 
     $('<div style="display: inline-block; position: relative; height: 28px"><span id="yt-blacklist">B</span><span id="yt-blacklist-research">&#9734;</span></div>').insertAfter('#upload-btn');
@@ -64,8 +70,10 @@
                      '<div class="textarea wl"><div>Whitelist</div><textarea rows="4" id="whitelist-words">' + sWL + '</textarea></div>' +
                      '<div class="textarea bl"><div>Blacklist</div><textarea rows="4" id="blacklist-words">' + sBL + '</textarea></div>' +
                      '<div class="yt-blacklist-sep">separator: <input id="sep-symbol" type="text" value="' + sep + '" maxlength="1" /></div>' +
+                     '<div id="yt-blacklist-enableadd">enable click add</div>' +
                      '<div id="yt-blacklist-suspend">suspend block</div>' +
                      '</div>');
+    if (add) $('#yt-blacklist-enableadd').text('disable click add');
 
     // check if a username is whitelisted
     function ifWhite(u) {
@@ -101,35 +109,28 @@
         return match;
     }
 
-    // delete blacklisted
-    function suspend(t) {
-        $(t).each(function() {
-            if ($(this).parents(".li-is-black").length) {
-                $(this).parents(".li-is-black").removeClass("li-is-black").show();
-            } else if ($(this).parents(".tr-is-black").length) {
-                $(this).parents(".tr-is-black").removeClass("tr-is-black").show();
-            }
-        });
-    }
-
     // do the thing
     function findMatch(s) {
         $(s).each(function() {
             var username = $(this).text().trim().toLowerCase();
             if (!username) return 'continue';
 
-            if (ifMatch(username)) { // if the username is blacklisted
-                if ($(this).parents("tr.pl-video").length) { // PLAYLIST (not the 'dark' ones)
-                    if (!$(this).parents(".tr-is-black").length) {
-                        $(this).closest("tr").addClass("tr-is-black").hide();
+            // if the username is blacklisted
+            if (ifMatch(username)) {
+                if ($(this).closest("tr").hasClass("tr.pl-video")) { // PLAYLIST PAGE
+                    if (!$(this).closest("tr").hasClass("tr-is-black")) {
+                        $(this).closest("tr").addClass("tr-is-black");
                     }
                 } else { // SEARCH, RECOMMENDED, etc...
-                    if (!$(this).parents(".li-is-black").length) {
-                        $(this).closest("li").addClass("li-is-black").hide();
+                    if (!$(this).closest("li").hasClass("li-is-black")) {
+                        $(this).closest("li").addClass("li-is-black");
                     }
                 }
-            } else { // if a previous black/whitelist word is deleted/added
-                suspend(this);
+            } else {
+                // button to add names to blacklist
+                if (add && !$(this).siblings('.yt-blacklist-add').length && !$(this).hasClass('comment-author-text')) {
+                    $('<span class="yt-blacklist-add" data="' + username + '">[x]</span>').insertBefore($(this));
+                }
             }
         });
     }
@@ -154,29 +155,59 @@
     });
 
     // save blacklist changes and research
-    $saved = $('<span style="margin-right: 7px; font-size: 80%">saved and searched again</span>');
+    $saved = $('<span style="margin-right: 7px; font-size: 80%">saved</span>');
     $error = $('<span style="margin-right: 7px; font-size: 80%; color: red">ERROR! * NOT ALLOWED AS SEPARATOR</span>');
     $('#saveblacklist').on('click', function() {
         if ($('#sep-symbol').val() == '*') {
             $(this).before($error);
             setTimeout(function() { $error.remove(); }, 4000);
         } else {
+            // save new values
             GM_setValue('savedblocks', $('#blacklist-words').val());
             GM_setValue('savedwhites', $('#whitelist-words').val());
             GM_setValue('sep', $('#sep-symbol').val());
-            getValues();
-            search();
+            // add notification
             $(this).before($saved);
             setTimeout(function() { $saved.remove(); }, 2000);
+            // clear everything
+            $(".li-is-black").removeClass("li-is-black");
+            $(".tr-is-black").removeClass("tr-is-black");
+            // research
+            getValues();
+            search();
         }
     });
 
     // research and suspend
     $('#yt-blacklist-research').on('click', search);
     $('#yt-blacklist-suspend').on('click', function() {
-        for (var i = 0; i < uClasses.length; i++) {
-            suspend($(uClasses[i]));
+        $(".li-is-black").removeClass("li-is-black");
+        $(".tr-is-black").removeClass("tr-is-black");
+    });
+
+    // enable/disable click add
+    $('#yt-blacklist-enableadd').on('click', function() {
+        if (add) {
+            add = '';
+            $('.yt-blacklist-add').remove();
+            $(this).text('enable click add');
+        } else {
+            add = 'yes';
+            $(this).text('disable click add');
         }
+        GM_setValue('enableadd', add);
+        search();
+    });
+
+    // add usernames to blacklist
+    $('body').on('click', '.yt-blacklist-add', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var q = sBL ? sep + ' ' : '';
+        $('#blacklist-words').val($('#blacklist-words').val() + q + $(this).attr('data'));
+        GM_setValue('savedblocks', $('#blacklist-words').val());
+        getValues();
+        search();
     });
 
     // research after every change in #content
