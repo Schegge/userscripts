@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AO3: Fic's Style and Bookmarks
 // @namespace    https://github.com/Schegge
-// @version      2.2
+// @version      2.3
 // @description  Change font, size, width, background.. + number of words for every chapter + estimated reading time + full screen mode + bookmarks: save the position you stopped reading a fic
 // @author       Schegge
 // @include      http://archiveofourown.org/*
@@ -12,37 +12,32 @@
 
 (function($) {
     /*function debugging(varName, variable) {
-        var message = '{FICSTYLE} [' + varName + ']';
+        var message = 'FS\t[' + varName + ']';
         if (variable !== undefined) {
-            message += ' (' + typeof variable + ') ' + variable;
+            message += '\t(' + typeof variable + ') ' + variable;
         }
         console.log(message);
     }*/
-    //localStorage.getItem("ficstyle_version")) // not used
 
     // BOOKMARKS
     var Bookmarks = {
-        getAll: function() {
+        getBooks: function() {
             var bookmarks = localStorage.getItem('ficstyle_bookmarks');
+            bookmarks = bookmarks.trim();
             if (!bookmarks) {
-                bookmarks = '';
+                bookmarks = '[]';
+                localStorage.setItem('ficstyle_bookmarks', bookmarks);
+            } else if (bookmarks.charAt(0) === '@') {
+                bookmarks = bookmarks.substring(1);
+                bookmarks = bookmarks.replace(/@/g, '"],["');
+                bookmarks = bookmarks.replace(/#/g, '","');
+                bookmarks = '[["' + bookmarks;
+                bookmarks += '"]]';
+                //debugging('bookmarks', bookmarks);
                 localStorage.setItem('ficstyle_bookmarks', bookmarks);
             }
-            //debugging('getAll', bookmarks);
-            return bookmarks;
-        },
-        getSingles: function() {
-            var all = this.getAll();
-            return all.split('@');
-        },
-        getElements: function() { // 0 = url, 1 = title, 2 = scrolltop
-            var els = [];
-            var singles = this.getSingles();
-            for(var i = 1; i < singles.length; i++) { // from 1 because the first element is empty (storage starts with a @)
-                els.push( singles[i].split('#') );
-            }
-            //debugging('getElements', els);
-            return els;
+            //debugging('getBooks', JSON.parse(bookmarks));
+            return JSON.parse(bookmarks);
         },
         getUrl: window.location.pathname.split('/works/')[1], // work id
         getTitle: function() {
@@ -55,7 +50,6 @@
                 title += ' (' + chapter + ')';
                 //debugging('getTitle chapter', chapter);
             }
-            title = title.replace(/[#@]/g, ' '); // just in case
             //debugging('getTitle final', title);
             return title;
         },
@@ -72,16 +66,14 @@
             return newbook;
         },
         checkIfExist: function(a) {
-            var url = this.getUrl;
-            var els = this.getElements();
-            //debugging('getUrl', url);
+            var books = this.getBooks();
 
-            for(var i = 0; i < els.length; i++) {
+            for(var i = 0; i < books.length; i++) {
                 // if a bookmark already existed for the current chapter
-                if (els[i][0] === url) {
-                //debugging('same fic');
+                if (books[i][0] === this.getUrl) {
+                    //debugging('same chapter');
                     if (a === 'book') { // retrieve the bookmark
-                        var book = els[i][2];
+                        var book = books[i][2];
                         if (book.indexOf('%') !== -1) {
                             book = book.replace('%', '');
                             book = parseFloat(book);
@@ -91,43 +83,49 @@
                         //debugging('checkIfExist(book)', book);
                         return book;
                     } else if (a === 'cancel') { // delete the old bookmark
-                        //debugging('checkIfExist(cancel)', els[i]);
-                        return '@' + els[i][0] + '#' + els[i][1] + '#' + els[i][2];
+                        //debugging('checkIfExist(cancel)', i);
+                        //debugging('checkIfExist(cancel)', books[i]);
+                        return i;
                     } else {
                         //debugging('checkIfExist()', true);
                         return true;
                     }
                 // if a bookmark already existed for the current fic
-                } else if (a === 'cancel' && els[i][0].split('/chapters/')[0] === url.split('/chapters/')[0]) { // delete the old bookmark
-                    //debugging('same chapter');
-                    return '@' + els[i][0] + '#' + els[i][1] + '#' + els[i][2];
+                } else if (a === 'cancel' && books[i][0].split('/chapters/')[0] === this.getUrl.split('/chapters/')[0]) { // delete the old bookmark
+                    //debugging('same fic');
+                    //debugging('checkIfExist(cancel)', i);
+                    //debugging('checkIfExist(cancel)', books[i]);
+                    return i;
                 }
             }
+
             //debugging('checkIfExist', false);
+            return false;
         },
         cancel: function() {
-            var newBookmarks = this.getAll();
+            var newBookmarks = this.getBooks();
             var cancel = this.checkIfExist('cancel');
-            if (cancel) {
-                newBookmarks = newBookmarks.replace(cancel, '');
+            //debugging('cancel', cancel);
+            if (cancel || cancel === 0) {
+                newBookmarks.splice(cancel, 1);
             }
             return newBookmarks;
         },
         getNew: function() {
             var newBookmarks = this.cancel(); // if the the fic was already bookmarked, delete the old bookmark
-            newBookmarks += '@' + this.getUrl + '#' + this.getTitle() + '#' + this.getNewBook(); // add new bookmark
+            newBookmarks.push([this.getUrl, this.getTitle(), this.getNewBook()]); // add new bookmark
             //debugging('getNew', newBookmarks);
-            localStorage.setItem('ficstyle_bookmarks', newBookmarks);
+            localStorage.setItem('ficstyle_bookmarks', JSON.stringify(newBookmarks));
         }
     };
 
     // create bookmarks' menu
     $('#header > ul').append('<li id="menu-bookmarks" class="dropdown" aria-haspopup="true"><a>Bookmarks</a><ul class="menu dropdown-menu" role="menu"></ul></li>');
 
-    var els = Bookmarks.getElements();
-    if (els.length) {
-        for(var z = 0; z < els.length; z++) {
-            $('#menu-bookmarks > ul.menu').append('<li role="menu-item"><a href="http://archiveofourown.org/works/' + els[z][0] + '">' + els[z][1] + '</a></li>');
+    var books = Bookmarks.getBooks();
+    if (books.length) {
+        for(var z = 0; z < books.length; z++) {
+            $('#menu-bookmarks > ul.menu').append('<li role="menu-item"><a href="http://archiveofourown.org/works/' + books[z][0] + '">' + books[z][1] + '</a></li>');
         }
     } else {
         $('#menu-bookmarks > ul.menu').append('<li role="menu-item"><a>No bookmarks yet.</a></li>');
@@ -138,9 +136,10 @@
     if ($words.length) {
         $words.each(function() {
             var numWords = $(this).text();
-            numWords = numWords.replace(',', '');
+            numWords = numWords.replace(/,/g, '');;
             //debugging('numWorkWords', numWords);
             $(this).after('<dt>Time:</dt><dd>' + countTime(numWords) + '</dd>');
+            //debugging('countTime(numWords)', countTime(numWords));
         });
     }
     function countTime(num) {
@@ -149,11 +148,9 @@
             timeReading = Math.round(timeReading) + 'min';
         } else {
             timeReading = (timeReading / 60).toFixed(2);
-            timeReading = timeReading.toString();
-            timeReading = timeReading.split('.');
-            var hours = timeReading[0];
+            timeReading = timeReading.toString().split('.');
             var minutes = Math.round(parseInt(timeReading[1]) / 100 * 60);
-            timeReading = hours + 'hr ' + minutes.toString() + 'min';
+            timeReading = timeReading[0] + 'hr ' + minutes.toString() + 'min';
         }
         return timeReading;
     }
@@ -199,22 +196,24 @@
        '#main > div.wrapper, #main > div.work > div.wrapper { margin-bottom: 1em; } ' +
        '.actions { font-family: \'Lucida Grande\', \'Lucida Sans Unicode\', \'GNU Unifont\', Verdana, Helvetica, sans-serif; font-size: 14px; } ' +
        '.chapter .preface { margin-bottom: 0; } ' +
-       '.chapter .preface[role=\'complementary\'] { margin-top: 0; padding-top: 0; } ' +
+       '.chapter .preface[role="complementary"] { margin-top: 0; padding-top: 0; } ' +
        '#workskin .notes, #workskin .summary { font-family: inherit; font-size: 15px } ' +
-       '#chapters .userstuff p { font-family: inherit; margin: .6em auto; text-align: justify; } ' +
-       '#chapters .userstuff br { display: block; margin-top: .6em; content: " "; } ' +
+       '.preface.group { color: inherit; background-color: inherit; } ' +
        'div.afterword { font-size: 14px } ' +
+       '#chapters .userstuff p { font-family: inherit; margin: .6em auto; text-align: justify; line-height: 1.5em } ' +
+       '#chapters .userstuff { font-family: inherit; text-align: justify; line-height: 1.5em } ' +
+       '#chapters .userstuff br { display: block; margin-top: .6em; content: " "; } ' +
+       '.userstuff hr { width: 100%; height: 1px; border: 0; background-image: linear-gradient(to right, transparent, rgba(0, 0, 0, .5), transparent); margin: 1.5em 0; } ' +
        '#chapters a, #chapters a:link, #chapters a:visited { color: inherit; } ' +
        'blockquote { font-family: inherit; } ' +
        '#chapters .userstuff blockquote { padding-top: 1px; padding-bottom: 1px; margin: 0 .5em; } ' +
-       '.userstuff hr { width: 100%; height: 1px; border: 0; background-image: linear-gradient(to right, transparent, rgba(0, 0, 0, .5), transparent); } ' +
        '.userstuff img { max-width: 100%; height: auto; display: block; margin: auto; } ' +
        '#options, .ficleft { position: fixed; bottom: 10px; margin: 0; padding: 0; font-family: Consolas, monospace; font-size: 16px; line-height: 18px; color: #000; text-shadow: 0 0 2px rgba(0, 0, 0, .4); z-index: 999; } ' +
        '#options { right: 10px; } ' +
        '.ficleft { display: none; left: 10px; } ' +
        '#options > div { display: none; margin: 5px 0 0 0; padding: 0 5px; cursor: pointer; } ' +
        '#options > div:last-child { display: block; padding: 2px 5px; color: #fff; background-color: rgba(0, 0, 0, .2); } ' +
-       '.ficleft a, #options a { border: 0; } ' +
+       '.ficleft a, #options a { border: 0; color: #000 } ' +
        'div.preface .notes, div.preface .summary, div.preface .series, div.preface .children { min-height: 0; } ' +
        '.notes-hidden { cursor: pointer; position: fixed; width: 50%; max-height: 50%; left: 50px; bottom: 50px; color: rgb(42, 42, 42); background-color: #fff; padding: 10px; box-shadow: 0 0 2px 1px rgba(0, 0, 0, .4); margin: 0; overflow: auto; z-index: 999; display: none; } ' +
        '.notes-headings { cursor: pointer; border-bottom-width: 0!important; margin: 0; text-align: center; color: #666;  } ' +
@@ -223,57 +222,50 @@
 
     // CSS changes depending on the user
     var Variables = {
-        fontName: function() {
-            var fontName = localStorage.getItem('ficstyle_fontName');
-            if (!fontName) {
-                fontName = Options.fontName[0];
-                localStorage.setItem('ficstyle_fontName', fontName);
+        init: function() {
+            if (!localStorage.getItem('ficstyle')) {
+                var all = {
+                    fontName: localStorage.getItem('ficstyle_fontName') ? localStorage.getItem('ficstyle_fontName') : Options.fontName[0],
+                    fontSize: localStorage.getItem('ficstyle_fontSize') ? parseFloat(localStorage.getItem('ficstyle_fontSize')) : Options.fontSize,
+                    padding: localStorage.getItem('ficstyle_padding') ? parseInt(localStorage.getItem('ficstyle_padding')) : Options.padding,
+                    colors: localStorage.getItem('ficstyle_colors') ? localStorage.getItem('ficstyle_colors') : Object.keys(Options.colors)[0]
+                };
+                localStorage.removeItem('ficstyle_fontName');
+                localStorage.removeItem('ficstyle_fontSize');
+                localStorage.removeItem('ficstyle_padding');
+                localStorage.removeItem('ficstyle_colors');
+                localStorage.setItem('ficstyle', JSON.stringify(all));
             }
-            return fontName;
         },
-        fontSize: function() {
-            var fontSize = localStorage.getItem('ficstyle_fontSize');
-            if (!fontSize) {
-                fontSize = Options.fontSize;
-                localStorage.setItem('ficstyle_fontSize', fontSize);
-            }
-            return fontSize;
+        get: function() {
+            var all = localStorage.getItem('ficstyle');
+            all = JSON.parse(all);
+            //debugging('get', JSON.stringify(all));
+            return all;
         },
-        padding: function() {
-            var padding = localStorage.getItem('ficstyle_padding');
-            if (!padding) {
-                padding = Options.padding;
-                localStorage.setItem('ficstyle_padding', padding);
-            }
-            return padding;
-        },
-        colors: function() {
-            var colors = localStorage.getItem('ficstyle_colors');
-            if (!colors) {
-                colors = Object.keys(Options.colors)[0];
-                localStorage.setItem('ficstyle_colors', colors);
-            }
-            return colors;
-        },
-        colorsDo: function() {
-            for(var i in Options.colors) {
-                if (i === this.colors()) {
-                    return [Options.colors[i][0], Options.colors[i][1]];
+        set: function(a, b) {
+            var all = this.get();
+            if (a && b) {
+                switch(a) {
+                    case 'fontName': all.fontName = b; break;
+                    case 'fontSize': all.fontSize = b; break;
+                    case 'padding': all.padding = b; break;
+                    case 'colors': all.colors = b; break;
                 }
+                localStorage.setItem('ficstyle', JSON.stringify(all));
             }
-        },
-        changingCSS: function() {
+            //debugging('set', JSON.stringify(all));
             addCSS('ficstyle-user-changes',
-               '#workskin { padding: 0 ' + this.padding() + '%; font-family: ' + this.fontName() + '; font-size: ' + this.fontSize() + '%; background-color: ' + this.colorsDo()[0] + '; color: ' + this.colorsDo()[1] + '; }'
+               '#workskin { padding: 0 ' + all.padding + '%; font-family: ' + all.fontName + '; font-size: ' + all.fontSize + '%; background-color: ' + Options.colors[all.colors][0] + '; color: ' + Options.colors[all.colors][1] + '; }'
             );
-
         }
     };
 
-    Variables.changingCSS(); // saved changes by user
+    Variables.init();
+    Variables.set(false, false); // saved changes by user
 
     // remove all the non-breaking white spaces
-    $('#chapters').html($('#chapters').html().replace(/&nbsp;/g, ''));
+    $('#chapters').html($('#chapters').html().replace(/&nbsp;/g, ' '));
 
     // # words and time for every chapter
     var numChapters = $('#chapters > .chapter').length; // if the fic has chapters
@@ -285,8 +277,8 @@
             text = text.replace(/(\s-\s)|(-)/g, '');
             text = text.replace(/[\."“”?!\)\(]/g, ' ');
             var words = text.match(/\S+\s/g);
-            //debugging('wordsChapter', text);
-            //debugging('wordsChapter', words.join(' | '));
+            ////debugging('wordsChapter', text);
+            ////debugging('wordsChapter', words.join(' | '));
             var numWords = words.length;
             numWords = numWords - 2; // because of <h3 class="landmark" heading id="work">Chapter Text</h3>
             $(this).siblings('.chapter.preface.group[role=\'complementary\']').before(
@@ -325,16 +317,14 @@
     // changes triggered by the user
     $('#reset-local-storage').on('click', function() {
         checkPosition();
-        localStorage.setItem('ficstyle_fontName', Options.fontName[0]);
-        localStorage.setItem('ficstyle_fontSize', Options.fontSize);
-        localStorage.setItem('ficstyle_padding', Options.padding);
-        localStorage.setItem('ficstyle_colors', Object.keys(Options.colors)[0]);
-        Variables.changingCSS();
+        localStorage.removeItem('ficstyle');
+        Variables.init();
+        Variables.set(false, false);
         returnBack();
     });
 
     $('#workskin-colors').on('click', function() {
-        var curColors = localStorage.getItem('ficstyle_colors');
+        var curColors = Variables.get().colors;
         for(var i = 0; i < Object.keys(Options.colors).length; i++) {
             //debugging('Object.keys(Options.colors)[i]', Object.keys(Options.colors)[i]);
             if (curColors === Object.keys(Options.colors)[i]) {
@@ -346,8 +336,7 @@
                     curColor = Object.keys(Options.colors)[j];
                 }
                 //debugging('foundNew', curColor);
-                localStorage.setItem('ficstyle_colors', curColor);
-                Variables.changingCSS();
+                Variables.set('colors', curColor);
                 break;
             }
         }
@@ -355,7 +344,7 @@
 
     $('#font-name-minus').on('click', function() {
         checkPosition();
-        var curFont = localStorage.getItem('ficstyle_fontName');
+        var curFont = Variables.get().fontName;
         for(var i = 0; i < Options.fontName.length; i++) {
             if (curFont === Options.fontName[i]) {
                 var j = i - 1;
@@ -365,8 +354,7 @@
                 } else {
                     curFont = Options.fontName[j];
                 }
-                localStorage.setItem('ficstyle_fontName', curFont);
-                Variables.changingCSS();
+                Variables.set('fontName', curFont);
                 break;
             }
         }
@@ -374,7 +362,7 @@
     });
     $('#font-name-plus').on('click', function() {
         checkPosition();
-        var curFont = localStorage.getItem('ficstyle_fontName');
+        var curFont = Variables.get().fontName;
         for(var i = 0; i < Options.fontName.length; i++) {
             if (curFont === Options.fontName[i]) {
                 var j = i + 1;
@@ -383,8 +371,7 @@
                 } else {
                     curFont = Options.fontName[j];
                 }
-                localStorage.setItem('ficstyle_fontName', curFont);
-                Variables.changingCSS();
+                Variables.set('fontName', curFont);
                 break;
             }
         }
@@ -393,33 +380,27 @@
 
     $('#font-size-minus').on('click', function() {
         checkPosition();
-        var curSize = parseFloat(localStorage.getItem('ficstyle_fontSize')) - 2.5;
-        localStorage.setItem('ficstyle_fontSize', curSize);
-        Variables.changingCSS();
+        Variables.set('fontSize', Variables.get().fontSize - 2.5);
         returnBack();
     });
     $('#font-size-plus').on('click', function() {
         checkPosition();
-        var curSize = parseFloat(localStorage.getItem('ficstyle_fontSize')) + 2.5;
-        localStorage.setItem('ficstyle_fontSize', curSize);
-        Variables.changingCSS();
+        Variables.set('fontSize', Variables.get().fontSize + 2.5);
         returnBack();
     });
 
     $('#padding-plus').on('click', function() {
         checkPosition();
-        var curPadding = parseInt(localStorage.getItem('ficstyle_padding')) + 1;
+        var curPadding = Variables.get().padding + 1;
         if (curPadding > 40) { curPadding = 40; }
-        localStorage.setItem('ficstyle_padding', curPadding);
-        Variables.changingCSS();
+        Variables.set('padding', curPadding);
         returnBack();
     });
     $('#padding-minus').on('click', function() {
         checkPosition();
-        var curPadding = parseInt(localStorage.getItem('ficstyle_padding')) - 1;
+        var curPadding = Variables.get().padding - 1;
         if (curPadding < 0) { curPadding = 0; }
-        localStorage.setItem('ficstyle_padding', curPadding);
-        Variables.changingCSS();
+        Variables.set('padding', curPadding);
         returnBack();
     });
 
@@ -429,13 +410,13 @@
         '<div id="full-screen"><a>Full Screen</a></div>'+
         '</div>');
 
-    $('body').append('<div class="ficleft" style="display: none;">' +
+    $('body').append('<div class="ficleft">' +
         '<a id="arrow" title="up">^</a> <a id="bookmark" title="new bookmark">+</a> ' +
         '<a id="delete-book" title="delete bookmark" style="display: none;">x</a>' +
         '</div>');
 
     // changes to create full screen mode
-    var isfullscreen = false;
+    var isFullScreen = false;
     function fullScreen() {
         //debugging('fullScreen');
         $('#outer').children().hide();
@@ -464,7 +445,7 @@
         $workskin.append($('#feedback > ul.actions').css({ 'font-size': '80%', 'width': '100%', 'padding': ' 0 0 10px 0' }));
         $('#workskin > ul.actions > li:nth-child(1), #show_comments_link').remove();
 
-        isfullscreen = true;
+        isFullScreen = true;
     }
 
     $('#workskin .preface .module').on('click', function() { // show/hide summary and notes
@@ -472,7 +453,7 @@
     });
 
     $('#full-screen').on('click', function() { // open/close full screen mode
-        if (!isfullscreen) fullScreen(); else window.location.reload();
+        if (!isFullScreen) fullScreen(); else window.location.reload();
     });
 
     $('#arrow').on('click', function() { // go to top
@@ -487,7 +468,7 @@
         $('#bookmark').css('color', '#900');
         setTimeout(function() {
             $('#bookmark').css('color', 'inherit');
-        }, 1000);
+        }, 1500);
     });
 
     $('#go-to-book').on('click', function() { // go to the position of the bookmark
@@ -499,7 +480,7 @@
     $('#delete-book').on('click', function() { // delete bookmark
         //debugging('deleteBookmark');
         var newBookmarks = Bookmarks.cancel();
-        localStorage.setItem('ficstyle_bookmarks', newBookmarks);
+        localStorage.setItem('ficstyle_bookmarks', JSON.stringify(newBookmarks));
         $('#delete-book').hide();
         $('#go-to-book').hide();
     });
