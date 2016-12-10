@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         AO3: Fic's Style and Bookmarks
 // @namespace    https://github.com/Schegge
-// @version      2.3
-// @description  Change font, size, width, background.. + number of words for every chapter + estimated reading time + full screen mode + bookmarks: save the position you stopped reading a fic
+// @version      2.3.1
+// @description  Change font, size, width, background.. + number of words for every chapter + estimated reading time + fullscreen mode + bookmarks: save the position you stopped reading a fic
 // @author       Schegge
 // @include      http://archiveofourown.org/*
 // @include      https://archiveofourown.org/*
@@ -65,12 +65,13 @@
             //debugging('getNewBook final', newbook);
             return newbook;
         },
-        checkIfExist: function(a) {
+        checkIfExist: function(a, b) {
             var books = this.getBooks();
+            var url = b || this.getUrl;
 
             for(var i = 0; i < books.length; i++) {
                 // if a bookmark already existed for the current chapter
-                if (books[i][0] === this.getUrl) {
+                if (books[i][0] === url) {
                     //debugging('same chapter');
                     if (a === 'book') { // retrieve the bookmark
                         var book = books[i][2];
@@ -91,7 +92,7 @@
                         return true;
                     }
                 // if a bookmark already existed for the current fic
-                } else if (a === 'cancel' && books[i][0].split('/chapters/')[0] === this.getUrl.split('/chapters/')[0]) { // delete the old bookmark
+                } else if (a === 'cancel' && books[i][0].split('/chapters/')[0] === url.split('/chapters/')[0]) { // delete the old bookmark
                     //debugging('same fic');
                     //debugging('checkIfExist(cancel)', i);
                     //debugging('checkIfExist(cancel)', books[i]);
@@ -102,9 +103,9 @@
             //debugging('checkIfExist', false);
             return false;
         },
-        cancel: function() {
+        cancel: function(b) {
             var newBookmarks = this.getBooks();
-            var cancel = this.checkIfExist('cancel');
+            var cancel = this.checkIfExist('cancel', b);
             //debugging('cancel', cancel);
             if (cancel || cancel === 0) {
                 newBookmarks.splice(cancel, 1);
@@ -120,23 +121,37 @@
     };
 
     // create bookmarks' menu
+    addCSS('ficstyle-menu',
+        '#menu-bookmarks ul li { display: flex!important; align-items: center; justify-content: space-between; } ' +
+        '#menu-bookmarks ul li a:first-child { flex-grow: 1; font-size: .9em; } ' +
+        'a.delete-book-menu { color: #900!important; } '
+        );
+
     $('#header > ul').append('<li id="menu-bookmarks" class="dropdown" aria-haspopup="true"><a>Bookmarks</a><ul class="menu dropdown-menu" role="menu"></ul></li>');
 
     var books = Bookmarks.getBooks();
     if (books.length) {
         for(var z = 0; z < books.length; z++) {
-            $('#menu-bookmarks > ul.menu').append('<li role="menu-item"><a href="http://archiveofourown.org/works/' + books[z][0] + '">' + books[z][1] + '</a></li>');
+            $('#menu-bookmarks > ul.menu').append('<li role="menu-item"><a href="http://archiveofourown.org/works/' + books[z][0] + '">' + books[z][1] + '</a> <a class="delete-book-menu" title="delete bookmark" data="' + books[z][0] + '">x</a></li>');
         }
     } else {
-        $('#menu-bookmarks > ul.menu').append('<li role="menu-item"><a>No bookmarks yet.</a></li>');
+        $('#menu-bookmarks > ul.menu').append('<li role="menu-item"><a>No bookmark yet.</a></li>');
     }
+
+    $('.delete-book-menu').on('click', function() { // delete bookmark
+        //debugging('delete-book-menu');
+        var newBookmarks = Bookmarks.cancel($(this).attr('data'));
+        $(this).hide();
+        $(this).prev().css('opacity', '.4');
+        localStorage.setItem('ficstyle_bookmarks', JSON.stringify(newBookmarks));
+    });
 
     // add estimated reading time
     var $words = $('dl.stats dd.words');
     if ($words.length) {
         $words.each(function() {
             var numWords = $(this).text();
-            numWords = numWords.replace(/,/g, '');;
+            numWords = numWords.replace(/,/g, '');
             //debugging('numWorkWords', numWords);
             $(this).after('<dt>Time:</dt><dd>' + countTime(numWords) + '</dd>');
             //debugging('countTime(numWords)', countTime(numWords));
@@ -153,6 +168,14 @@
             timeReading = timeReading[0] + 'hr ' + minutes.toString() + 'min';
         }
         return timeReading;
+    }
+
+    // CSS changes
+    function addCSS(id, css) {
+        //debugging('addCSS '+ id + '.length', $('style#' + id).length);
+        if (!$('style#' + id).length) $('head').append('<style id="' + id + '" type="text/css">' + css + '</style>');
+        else $('style#' + id).html(css);
+        //debugging('addCSS '+ id, css);
     }
 
 
@@ -183,41 +206,33 @@
         }
     };
 
-    // CSS changes
-    function addCSS(id, css) {
-        //debugging('addCSS '+ id + '.length', $('style#' + id).length);
-        if (!$('style#' + id).length) $('head').append('<style id="' + id + '" type="text/css">' + css + '</style>');
-        else $('style#' + id).html(css);
-        //debugging('addCSS '+ id, css);
-    }
-
     addCSS('ficstyle-general',
-       '#workskin { margin: 0; text-align: justify; max-width: none!important; } ' +
-       '#main > div.wrapper, #main > div.work > div.wrapper { margin-bottom: 1em; } ' +
-       '.actions { font-family: \'Lucida Grande\', \'Lucida Sans Unicode\', \'GNU Unifont\', Verdana, Helvetica, sans-serif; font-size: 14px; } ' +
-       '.chapter .preface { margin-bottom: 0; } ' +
-       '.chapter .preface[role="complementary"] { margin-top: 0; padding-top: 0; } ' +
-       '#workskin .notes, #workskin .summary { font-family: inherit; font-size: 15px } ' +
-       '.preface.group { color: inherit; background-color: inherit; } ' +
-       'div.afterword { font-size: 14px } ' +
-       '#chapters .userstuff p { font-family: inherit; margin: .6em auto; text-align: justify; line-height: 1.5em } ' +
-       '#chapters .userstuff { font-family: inherit; text-align: justify; line-height: 1.5em } ' +
-       '#chapters .userstuff br { display: block; margin-top: .6em; content: " "; } ' +
-       '.userstuff hr { width: 100%; height: 1px; border: 0; background-image: linear-gradient(to right, transparent, rgba(0, 0, 0, .5), transparent); margin: 1.5em 0; } ' +
-       '#chapters a, #chapters a:link, #chapters a:visited { color: inherit; } ' +
-       'blockquote { font-family: inherit; } ' +
-       '#chapters .userstuff blockquote { padding-top: 1px; padding-bottom: 1px; margin: 0 .5em; } ' +
-       '.userstuff img { max-width: 100%; height: auto; display: block; margin: auto; } ' +
-       '#options, .ficleft { position: fixed; bottom: 10px; margin: 0; padding: 0; font-family: Consolas, monospace; font-size: 16px; line-height: 18px; color: #000; text-shadow: 0 0 2px rgba(0, 0, 0, .4); z-index: 999; } ' +
-       '#options { right: 10px; } ' +
-       '.ficleft { display: none; left: 10px; } ' +
-       '#options > div { display: none; margin: 5px 0 0 0; padding: 0 5px; cursor: pointer; } ' +
-       '#options > div:last-child { display: block; padding: 2px 5px; color: #fff; background-color: rgba(0, 0, 0, .2); } ' +
-       '.ficleft a, #options a { border: 0; color: #000 } ' +
-       'div.preface .notes, div.preface .summary, div.preface .series, div.preface .children { min-height: 0; } ' +
-       '.notes-hidden { cursor: pointer; position: fixed; width: 50%; max-height: 50%; left: 50px; bottom: 50px; color: rgb(42, 42, 42); background-color: #fff; padding: 10px; box-shadow: 0 0 2px 1px rgba(0, 0, 0, .4); margin: 0; overflow: auto; z-index: 999; display: none; } ' +
-       '.notes-headings { cursor: pointer; border-bottom-width: 0!important; margin: 0; text-align: center; color: #666;  } ' +
-       '.chapterWords { font-size: .9em; color: inherit; font-family: verdana, sans-serif; font-variant: small-caps; text-align: center; margin: 2em 0 .6em; }'
+        '#workskin { margin: 0; text-align: justify; max-width: none!important; } ' +
+        '#main > div.wrapper, #main > div.work > div.wrapper { margin-bottom: 1em; } ' +
+        '.actions { font-family: \'Lucida Grande\', \'Lucida Sans Unicode\', \'GNU Unifont\', Verdana, Helvetica, sans-serif; font-size: 14px; } ' +
+        '.chapter .preface { margin-bottom: 0; } ' +
+        '.chapter .preface[role="complementary"] { margin-top: 0; padding-top: 0; } ' +
+        '#workskin .notes, #workskin .summary { font-family: inherit; font-size: 15px } ' +
+        '.preface.group { color: inherit; background-color: inherit; } ' +
+        'div.afterword { font-size: 14px } ' +
+        '#chapters .userstuff p { font-family: inherit; margin: .6em auto; text-align: justify; line-height: 1.5em } ' +
+        '#chapters .userstuff { font-family: inherit; text-align: justify; line-height: 1.5em } ' +
+        '#chapters .userstuff br { display: block; margin-top: .6em; content: " "; } ' +
+        '.userstuff hr { width: 100%; height: 1px; border: 0; background-image: linear-gradient(to right, transparent, rgba(0, 0, 0, .5), transparent); margin: 1.5em 0; } ' +
+        '#chapters a, #chapters a:link, #chapters a:visited { color: inherit; } ' +
+        'blockquote { font-family: inherit; } ' +
+        '#chapters .userstuff blockquote { padding-top: 1px; padding-bottom: 1px; margin: 0 .5em; } ' +
+        '.userstuff img { max-width: 100%; height: auto; display: block; margin: auto; } ' +
+        '#options, .ficleft { position: fixed; bottom: 10px; margin: 0; padding: 0; font-family: Consolas, monospace; font-size: 16px; line-height: 18px; color: #000; text-shadow: 0 0 2px rgba(0, 0, 0, .4); z-index: 999; } ' +
+        '#options { right: 10px; } ' +
+        '.ficleft { display: none; left: 10px; } ' +
+        '#options > div { display: none; margin: 5px 0 0 0; padding: 0 5px; cursor: pointer; } ' +
+        '#options > div:last-child { display: block; padding: 2px 5px; color: #fff; background-color: rgba(0, 0, 0, .2); } ' +
+        '.ficleft a, #options a { border: 0; color: #000 } ' +
+        'div.preface .notes, div.preface .summary, div.preface .series, div.preface .children { min-height: 0; } ' +
+        '.notes-hidden { cursor: pointer; position: fixed; width: 50%; max-height: 50%; left: 50px; bottom: 50px; color: rgb(42, 42, 42); background-color: #fff; padding: 10px; box-shadow: 0 0 2px 1px rgba(0, 0, 0, .4); margin: 0; overflow: auto; z-index: 999; display: none; } ' +
+        '.notes-headings { cursor: pointer; border-bottom-width: 0!important; margin: 0; text-align: center; color: #666;  } ' +
+        '.chapterWords { font-size: .9em; color: inherit; font-family: verdana, sans-serif; font-variant: small-caps; text-align: center; margin: 2em 0 .6em; }'
     );
 
     // CSS changes depending on the user
