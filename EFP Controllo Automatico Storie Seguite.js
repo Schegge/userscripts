@@ -20,26 +20,17 @@
         }
         console.log(messaggio);
     }
-
     debugging('inizio');
 
     // controllare se siamo sulla pagina delle storie seguite (followed) oppure no
     var followPage = window.location.pathname === '/followed.php' ? true : false;
     debugging('followPage', followPage);
 
-    // se non siamo in followed, recuperare le informazioni con una richiesta xhr, altrimenti non ce n'è bisogno
+    // se non siamo in followed recuperare le informazioni tramite load(), altrimenti non ce n'è bisogno
     if (!followPage) {
         $('body').append('<div id="data-followed" style="display: none"></div>'); // dove i dati verranno salvati
-        // richiesta xhr
-        $.get('http://www.efpfanfic.net/followed.php').done(function(data){
-            debugging('richiesta xhr fatta');
-            // prendere gli elementi tra #corpo e #footer
-            var dataCut = data.split('<div id="corpo">')[1];
-            dataCut = dataCut.split('<div id="footer">')[0];
-            debugging('dataCut', dataCut.length);
-            // inserirli nella pagina
-            $('#data-followed').html('<div id="corpo">' + dataCut);
-            // controllare le informazioni sulle storie e capitoli
+        $('#data-followed').load('/followed.php #corpo', function() {
+            debugging('load /followed.php');
             checkNewChapters('#data-followed');
         });
     } else {
@@ -103,7 +94,7 @@
         debugging('segnale', segnale);
         debugging('alert', alert);
 
-        // aggiungere le indicazione delle modifiche salvate in alert e in homepage anche il cuoricino se ce ne sono state
+        // aggiungere la indicazione delle modifiche salvate in alert, e in homepage anche il cuoricino se ci sono state
         if (followPage) {
             $('#corpo > div:nth-child(1) > div:nth-child(3)').before('<div style="margin: 0px 10px 10px 15px; padding: 0 10px 10px 10px; color: #009999;">' + alert + '</div>');
         } else if (segnale) {
