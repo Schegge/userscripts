@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AO3: Fic's Style and Bookmarks
 // @namespace    https://github.com/Schegge
-// @version      2.3.1
+// @version      2.3.2
 // @description  Change font, size, width, background.. + number of words for every chapter + estimated reading time + fullscreen mode + bookmarks: save the position you stopped reading a fic
 // @author       Schegge
 // @include      http://archiveofourown.org/*
@@ -74,7 +74,7 @@
                 if (books[i][0] === url) {
                     //debugging('same chapter');
                     if (a === 'book') { // retrieve the bookmark
-                        var book = books[i][2];
+                        var book = books[i][2].toString();
                         if (book.indexOf('%') !== -1) {
                             book = book.replace('%', '');
                             book = parseFloat(book);
@@ -180,9 +180,8 @@
 
 
     // BELOW ONLY ON THE FIC'S PAGE
-    var windowUrl = window.location.pathname;
     // include: (whatever)/works/(numbers) and (whatever)/works/(numbers)/chapters/(numbers) and exclude: navigate
-    if (!/.*\/works\/\d+(\/chapters\/\d+)?(?!.*navigate)/.test(windowUrl)) return 'stop';
+    if (!/.*\/works\/\d+(\/chapters\/\d+)?(?!.*navigate)/.test(window.location.pathname)) return;
 
     var $workskin = $('#workskin');
 
@@ -254,9 +253,8 @@
         },
         get: function() {
             var all = localStorage.getItem('ficstyle');
-            all = JSON.parse(all);
             //debugging('get', JSON.stringify(all));
-            return all;
+            return JSON.parse(all);
         },
         set: function(a, b) {
             var all = this.get();
@@ -277,7 +275,7 @@
     };
 
     Variables.init();
-    Variables.set(false, false); // saved changes by user
+    Variables.set(); // saved changes by user
 
     // remove all the non-breaking white spaces
     $('#chapters').html($('#chapters').html().replace(/&nbsp;/g, ' '));
@@ -334,7 +332,7 @@
         checkPosition();
         localStorage.removeItem('ficstyle');
         Variables.init();
-        Variables.set(false, false);
+        Variables.set();
         returnBack();
     });
 
