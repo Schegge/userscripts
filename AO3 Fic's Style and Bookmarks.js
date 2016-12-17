@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AO3: Fic's Style and Bookmarks
 // @namespace    https://github.com/Schegge
-// @version      2.3.2
+// @version      2.3.3
 // @description  Change font, size, width, background.. + number of words for every chapter + estimated reading time + fullscreen mode + bookmarks: save the position you stopped reading a fic
 // @author       Schegge
 // @include      http://archiveofourown.org/*
@@ -23,7 +23,6 @@
     var Bookmarks = {
         getBooks: function() {
             var bookmarks = localStorage.getItem('ficstyle_bookmarks');
-            bookmarks = bookmarks.trim();
             if (!bookmarks) {
                 bookmarks = '[]';
                 localStorage.setItem('ficstyle_bookmarks', bookmarks);
@@ -37,7 +36,7 @@
                 localStorage.setItem('ficstyle_bookmarks', bookmarks);
             }
             //debugging('getBooks', JSON.parse(bookmarks));
-            return JSON.parse(bookmarks);
+            return JSON.parse(bookmarks.trim());
         },
         getUrl: window.location.pathname.split('/works/')[1], // work id
         getTitle: function() {
@@ -74,13 +73,11 @@
                 if (books[i][0] === url) {
                     //debugging('same chapter');
                     if (a === 'book') { // retrieve the bookmark
-                        var book = books[i][2].toString();
-                        if (book.indexOf('%') !== -1) {
+                        if (book.toString().indexOf('%') !== -1) {
                             book = book.replace('%', '');
                             book = parseFloat(book);
                             book = book * $(document).height();
                         }
-                        book = parseFloat(book);
                         //debugging('checkIfExist(book)', book);
                         return book;
                     } else if (a === 'cancel') { // delete the old bookmark
@@ -211,23 +208,24 @@
         '.actions { font-family: \'Lucida Grande\', \'Lucida Sans Unicode\', \'GNU Unifont\', Verdana, Helvetica, sans-serif; font-size: 14px; } ' +
         '.chapter .preface { margin-bottom: 0; } ' +
         '.chapter .preface[role="complementary"] { margin-top: 0; padding-top: 0; } ' +
-        '#workskin .notes, #workskin .summary { font-family: inherit; font-size: 15px } ' +
+        '#workskin .notes, #workskin .summary { font-family: inherit; font-size: 15px; } ' +
         '.preface.group { color: inherit; background-color: inherit; } ' +
         'div.afterword { font-size: 14px } ' +
-        '#chapters .userstuff p { font-family: inherit; margin: .6em auto; text-align: justify; line-height: 1.5em } ' +
-        '#chapters .userstuff { font-family: inherit; text-align: justify; line-height: 1.5em } ' +
-        '#chapters .userstuff br { display: block; margin-top: .6em; content: " "; } ' +
+        '#workskin #chapters, #workskin #chapters .userstuff { width: 100%!important; box-sizing: border-box; } ' +
+        '#workskin #chapters .userstuff p { font-family: inherit; margin: .6em auto; text-align: justify; line-height: 1.5em; } ' +
+        '#workskin #chapters .userstuff { font-family: inherit; text-align: justify; line-height: 1.5em } ' +
+        '#workskin #chapters .userstuff br { display: block; margin-top: .6em; content: " "; } ' +
         '.userstuff hr { width: 100%; height: 1px; border: 0; background-image: linear-gradient(to right, transparent, rgba(0, 0, 0, .5), transparent); margin: 1.5em 0; } ' +
-        '#chapters a, #chapters a:link, #chapters a:visited { color: inherit; } ' +
+        '#workskin #chapters a, #chapters a:link, #chapters a:visited { color: inherit; } ' +
         'blockquote { font-family: inherit; } ' +
-        '#chapters .userstuff blockquote { padding-top: 1px; padding-bottom: 1px; margin: 0 .5em; } ' +
+        '#workskin #chapters .userstuff blockquote { padding-top: 1px; padding-bottom: 1px; margin: 0 .5em; } ' +
         '.userstuff img { max-width: 100%; height: auto; display: block; margin: auto; } ' +
         '#options, .ficleft { position: fixed; bottom: 10px; margin: 0; padding: 0; font-family: Consolas, monospace; font-size: 16px; line-height: 18px; color: #000; text-shadow: 0 0 2px rgba(0, 0, 0, .4); z-index: 999; } ' +
         '#options { right: 10px; } ' +
         '.ficleft { display: none; left: 10px; } ' +
         '#options > div { display: none; margin: 5px 0 0 0; padding: 0 5px; cursor: pointer; } ' +
         '#options > div:last-child { display: block; padding: 2px 5px; color: #fff; background-color: rgba(0, 0, 0, .2); } ' +
-        '.ficleft a, #options a { border: 0; color: #000 } ' +
+        '.ficleft a, #options a { border: 0; color: #000; } ' +
         'div.preface .notes, div.preface .summary, div.preface .series, div.preface .children { min-height: 0; } ' +
         '.notes-hidden { cursor: pointer; position: fixed; width: 50%; max-height: 50%; left: 50px; bottom: 50px; color: rgb(42, 42, 42); background-color: #fff; padding: 10px; box-shadow: 0 0 2px 1px rgba(0, 0, 0, .4); margin: 0; overflow: auto; z-index: 999; display: none; } ' +
         '.notes-headings { cursor: pointer; border-bottom-width: 0!important; margin: 0; text-align: center; color: #666;  } ' +
@@ -269,7 +267,8 @@
             }
             //debugging('set', JSON.stringify(all));
             addCSS('ficstyle-user-changes',
-               '#workskin { padding: 0 ' + all.padding + '%; font-family: ' + all.fontName + '; font-size: ' + all.fontSize + '%; background-color: ' + Options.colors[all.colors][0] + '; color: ' + Options.colors[all.colors][1] + '; }'
+               '#workskin { font-family: ' + all.fontName + '; padding: 0 ' + all.padding + '%; font-size: ' + all.fontSize + '%; background-color: ' + Options.colors[all.colors][0] + '; color: ' + Options.colors[all.colors][1] + ';  }'
+
             );
         }
     };
