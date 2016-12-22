@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AO3: Fic's Style and Bookmarks
 // @namespace    https://github.com/Schegge
-// @version      2.3.3
+// @version      2.3.4
 // @description  Change font, size, width, background.. + number of words for every chapter + estimated reading time + fullscreen mode + bookmarks: save the position you stopped reading a fic
 // @author       Schegge
 // @include      http://archiveofourown.org/*
@@ -73,6 +73,7 @@
                 if (books[i][0] === url) {
                     //debugging('same chapter');
                     if (a === 'book') { // retrieve the bookmark
+                        var book = books[i][2];
                         if (book.toString().indexOf('%') !== -1) {
                             book = book.replace('%', '');
                             book = parseFloat(book);
@@ -454,7 +455,7 @@
 
         $(document).scrollTop(0);
 
-        $workskin.append($('#feedback > ul.actions').css({ 'font-size': '80%', 'width': '100%', 'padding': ' 0 0 10px 0' }));
+        $workskin.append($('#feedback > ul.actions').css({ 'font-size': '60%', 'width': '100%', 'padding': ' 0 0 10px 0' }));
         $('#workskin > ul.actions > li:nth-child(1), #show_comments_link').remove();
 
         isFullScreen = true;
