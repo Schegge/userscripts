@@ -3,7 +3,7 @@
 // @author       Schegge
 // @namespace    https://github.com/Schegge
 // @description  Prevent from seeing videos by certain users (from recommended, search, related channels...) [for BOTH the OLD and NEW YT's LAYOUT]
-// @version      2.3
+// @version      2.3.1
 // @match        *://www.youtube.com/*
 // @exclude      *://www.youtube.com/embed/*
 // @require      https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js
@@ -16,7 +16,7 @@
   →  the program is case-insensitive
   →  you can choose the symbol to split the usernames (default is a comma) ('*' not allowed) (max 1 character)
   →  put a * in front of a word for wildcard (only in the blacklist!), it will find the word no matter its position in the username (example: *vevo)
-  →  you can enable/disable to blacklist channels by clicking on '[x]' before the usernames
+  →  you can enable/disable to blacklist channels by clicking/right clicking on '[x]' before the usernames
   →  you can suspend temporarily the block (to reactivate it just click on save or refresh the page)
   →  it also hides videos from the playlists/mixes, but it doesn't prevent them from playing if the playlist is in autoplay
 
@@ -43,9 +43,9 @@
 	}
 	getValues();
 
-	if (GM_getValue('byuver', '1') !== '2.3') {
-		$('body').append('<div id="byu-notice" style="position: fixed; z-index: 999999; width: 200px; font-size: 1.5em; padding: 1.5em; bottom: 50px; right: 50px; background: red; color: #fff">"Block YouTube Users" now works with both the old and new layout!<br>KNOWN BUG (with the new layout): clicking on [x] opens the video.<br><br><span style="cursor: pointer; background: rgba(0,0,0,.5); border-radius: 5px; padding: 0 5px">dismiss</span></div>');
-		GM_setValue('byuver', '2.3');
+	if (GM_getValue('byuver', '1') !== '2.3.1') {
+		$('body').append('<div id="byu-notice" style="position: fixed; z-index: 999999; width: 40%; min-width: 200px; font-size: 1.2em; padding: 1.5em; bottom: 50px; right: 50px; background: red; color: #fff">[2.3] "Block YouTube Users" now works with both the old and new layout!<br><br>[2.3.1] KNOWN BUG (with the new layout): clicking on [x] opens the video, so <b>right-click</b> it instead.<br><br><span style="cursor: pointer; background: rgba(0,0,0,.5); border-radius: 5px; padding: 0 5px">dismiss</span></div>');
+		GM_setValue('byuver', '2.3.1');
 		$('#byu-notice span').on('click', function() { $('#byu-notice').remove(); });
 	}
 
@@ -268,7 +268,7 @@
 	});
 
 	// add usernames to blacklist
-	$('body').on('click', '.byu-add', function(e) {
+	$('body').on('click contextmenu', '.byu-add', function(e) {
 		e.preventDefault();
 		e.stopPropagation();
 		var q = sBL ? sep + ' ' : '';
@@ -276,10 +276,6 @@
 		GM_setValue('savedblocks', $('#byu-blacklist-words').val());
 		getValues();
 		search();
-	});
-	$('body').on('mousedown tap touchend touchstart', '.byu-add', function(e) {
-		e.preventDefault();
-		e.stopPropagation();
 	});
 
 })(jQuery);
