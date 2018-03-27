@@ -7,10 +7,13 @@
 // @match        *://www.youtube.com/*
 // @exclude      *://www.youtube.com/embed/*
 // @require      https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js
-// @grant        GM_getValue
-// @grant        GM_setValue
+// @require      https://greasemonkey.github.io/gm4-polyfill/gm4-polyfill.js
+// @grant        GM.getValue
+// @grant        GM.setValue
 // @icon         data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC4AAAAuCAYAAABXuSs3AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyBpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSBXaW5kb3dzIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOkMzRDhDREZEMzVGMDExRTVBOUUzRDg5MDZENTJEMTA2IiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOkMzRDhDREZFMzVGMDExRTVBOUUzRDg5MDZENTJEMTA2Ij4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6QzNEOENERkIzNUYwMTFFNUE5RTNEODkwNkQ1MkQxMDYiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6QzNEOENERkMzNUYwMTFFNUE5RTNEODkwNkQ1MkQxMDYiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz6dWQTHAAADwklEQVR42tRaTUwTQRR+u10q5WKTclOExASMwXT1aExoQpB4UHswajyVSDx40Caa6AmrJ000URI9EJP2ZOJJiBeh/oD4c6S9iScRDxyoQQ4USuk6s4wy2c7szP6Uti95TCAz3W9nvve996YohmFAM5oKTWpNC1wTTchOTibQ8Bj5Xh+fm0e+gvwH8WniQhsYHJQDjizhM2hsUTL2kfEOGSeQZ5CP+0GV3C4y4CzyV+SZuieqkCMFZbkAwedpT6gqh3qgcqADjd1gtLWJTmQO+RA5AVfAYRv4Mqjz370pAbV+66gO5ZP95svYWJqKgcZQlcBcDvY8eAQtL16KpmYaUg617DsRBTuJQLjjuC13O/YDIM7Sx46phePCShHm7n/+CgG0duvEcd6UpHXnNT9UZePeCP3rAut4tZnZU9qb7BFlaSnE+oyW8dd2wKOug5NnRiRSpfuhoSusZJIyf4Zap6C4PlAV/IUCqD8XTdXhWIwOUs8cN9ojzhYU189zVefbvP+1itHe7lc84piZYUruWrEWwCPQSFYfOVRV5i7Y8LtK3VTJo3ViYVvp7D18ESqVXnZJ0M1btmBVN1/k0KoexfSYTr009i6l8LtV+zh7LpB9f5C1qDzQb1e/pHyXQ5xcgqPPwNg55qhVd7FaKEjqlCI7+IxQCMrx07xHTDDzgl91B8y5q34x6NLtm7zd/sNK946Dk5FsvOUABBpnXZugjPNizBlwnyURUyc4+tTMmAybsWvn6l4dqou/IHj/IQt8HwEe9tRImLa2xvwzbgoMOw1G6zAwXpWId74FlbaWYo0GH7NSRnO6O1Xa29MNpWtXJbuogtk4BBiBjD878OkLq0KMEjlM1o0qOEbwS+ITYh7/1Fve0us4F/guh4wsN85RA4xYR5rdydt1BdGKI41JetdrATyD6vGUbWWbHsOc/cCkE4oFg91Ax2ngMlTR/X4zTqMhsk6aLjLAww4fkPO0Gfb3LV2Og5OTJNxWk3Fu9Whf2rpQFY6Gu6CWbpU2Wlp3r5GofqGwzTGnSEJhXqKW+V2+q8wZEyUlFGz/d0tZXR1mrNFBcOOLC7gtMfBp3+WQSuf7iDuy0nBCNCXfUEWWCfpyQnT5CWC5M9fqCRjX45uXLshQBMDFFVxNAFeO6bAZPyNb4z+B7etm58GJj3Lj1g1mwqC1V3gbZZkvYXnPzbIED6XmOLB/PedKw3VAgiozxishGhX4XaL9OS8JKAc7X+vV0vJEOTIy9Y4M8CQB3yWbTSVtmhpz4PCqT2nWf0L4K8AAGQEtCug+rd8AAAAASUVORK5CYII=
 // ==/UserScript==
+
+//
 
 /*** DESCRIPTION
   →  the program is case-insensitive
@@ -29,30 +32,27 @@
  clicking on '[x]' opens the video
 ***/
 
-(function($) {
-
+$(async function() {
 	// get black/whitelist saved
 	var sBL, sWL, sep, add, ytblacklist, ytwhitelist;
-	function getValues() {
-		sBL = GM_getValue('savedblocks', 'it is case-insensitive, split the usernames with a comma (default), put a * in front of a word for wildcard, it will find the word no matter its position in the username');
-		sWL = GM_getValue('savedwhites', 'write here whitelisted usernames, if for example you blacklist *vevo, but you want to see IndilaVEVO');
-		sep = GM_getValue('sep', ',');
-		add = GM_getValue('enableadd', '');
+	async function getValues() {
+		sBL = await GM.getValue('savedblocks', 'it is case-insensitive, split the usernames with a comma (default), put a * in front of a word for wildcard, it will find the word no matter its position in the username');
+		sWL = await GM.getValue('savedwhites', 'write here whitelisted usernames, if for example you blacklist *vevo, but you want to see IndilaVEVO');
+		sep = await GM.getValue('sep', ',');
+		add = await GM.getValue('enableadd', '');
 		ytblacklist = sBL.split(sep);
 		ytwhitelist = sWL.split(sep);
 	}
-	getValues();
-
-	if (GM_getValue('byuver', '1') !== '2.3.1') {
+	await getValues();
+	
+	if ( await GM.getValue('byuver', '1') !== '2.3.1') {
 		$('body').append('<div id="byu-notice" style="position: fixed; z-index: 999999; width: 40%; min-width: 200px; font-size: 1.2em; padding: 1.5em; bottom: 50px; right: 50px; background: red; color: #fff">[2.3] "Block YouTube Users" now works with both the old and new layout!<br><br>[2.3.1] KNOWN BUG (with the new layout): clicking on [x] opens the video, so <b>right-click</b> it instead.<br><br><span style="cursor: pointer; background: rgba(0,0,0,.5); border-radius: 5px; padding: 0 5px">dismiss</span></div>');
-		GM_setValue('byuver', '2.3.1');
+		GM.setValue('byuver', '2.3.1');
 		$('#byu-notice span').on('click', function() { $('#byu-notice').remove(); });
 	}
-
 	// vars
 	var suspend = false;
 	var uClasses, tClasses, margintop;
-
 	// check what layout
 	var ver = $('#upload-btn').length ? 'old' : 'new';
 
@@ -95,7 +95,6 @@
 
 		try { observer.observe(target, config); } catch (e) {}
 	}
-
 	$('head').append('<style> ' +
 		'#byu-is-black { display: none!important; } ' +
 		'#byu { color: #A0A0A0; cursor: pointer; font-size: 22px; vertical-align: middle; } ' +
@@ -222,7 +221,7 @@
 	// save blacklist changes and research
 	$saved = $('<span style="margin-right: 7px; font-size: 80%">saved</span>');
 	$error = $('<span style="margin-right: 7px; font-size: 80%; color: red">ERROR! * NOT ALLOWED AS SEPARATOR</span>');
-	$('#byu-saveblacklist').on('click', function() {
+	$('#byu-saveblacklist').on('click', async function() {
 		if ($('#byu-sep-symbol').val() == '*') {
 			$(this).before($error);
 			setTimeout(function() { $error.remove(); }, 4000);
@@ -232,16 +231,16 @@
 				suspend = false;
 			}
 			// save new values
-			GM_setValue('savedblocks', $('#byu-blacklist-words').val());
-			GM_setValue('savedwhites', $('#byu-whitelist-words').val());
-			GM_setValue('sep', $('#byu-sep-symbol').val());
+			GM.setValue('savedblocks', $('#byu-blacklist-words').val());
+			GM.setValue('savedwhites', $('#byu-whitelist-words').val());
+			GM.setValue('sep', $('#byu-sep-symbol').val());
 			// add notification
 			$(this).before($saved);
 			setTimeout(function() { $saved.remove(); }, 2000);
 			// clear everything
-			$('[id="byu-is-black"]').each(function(){ $(this).attr('id', ''); });
+			$('[id="byu-is-black"]').each( function(){ $(this).attr('id', ''); });
 			// research
-			getValues();
+			await getValues();
 			search();
 			}
 		});
@@ -256,7 +255,7 @@
 			add = 'yes';
 			$(this).text('disable click add');
 		}
-		GM_setValue('enableadd', add);
+		GM.setValue('enableadd', add);
 		search();
 	});
 
@@ -268,14 +267,13 @@
 	});
 
 	// add usernames to blacklist
-	$('body').on('click contextmenu', '.byu-add', function(e) {
+	$('body').on('click contextmenu', '.byu-add', async function(e) {
 		e.preventDefault();
 		e.stopPropagation();
 		var q = sBL ? sep + ' ' : '';
 		$('#byu-blacklist-words').val($('#byu-blacklist-words').val() + q + $(this).attr('data'));
-		GM_setValue('savedblocks', $('#byu-blacklist-words').val());
-		getValues();
+		GM.setValue('savedblocks', $('#byu-blacklist-words').val());
+		await getValues();
 		search();
 	});
-
-})(jQuery);
+}());
