@@ -173,120 +173,133 @@
    var Blacklist = { where: 'li.blurb.group' };
    if ($(Blacklist.where).length) {
       //debugging('SEARCH PAGE');
-      var BL = {freeforms: [], relationships: []};
-      Blacklist.what = ['freeforms', 'relationships'];
+      var BL = [];
+      Blacklist.what = [
+         '.tags .tag',
+         '.required-tags span.text'
+      ];
+      Blacklist.show = localStorage.getItem('ficstyle_blacklist_show') ? localStorage.getItem('ficstyle_blacklist_show') : true;
       Blacklist.get = function() {
-         for (var i = 0; i < this.what.length; i++) {
-            //debugging('Blacklist.get() ' + this.what[i], BL[this.what[i]]);
-            if (localStorage.getItem('ficstyle_blacklist_' + this.what[i])) {
-               try { BL[this.what[i]] = JSON.parse(localStorage.getItem('ficstyle_blacklist_' + this.what[i])); } catch(e) {}
-            }
+         if (localStorage.getItem('ficstyle_blacklist')) {
+            BL = JSON.parse(localStorage.getItem('ficstyle_blacklist'));
          }
       };
-      Blacklist.set = function(w, v) {
+      Blacklist.set = function(v) {
          var items = v ? v.replace(/\"/g, '\\\"').trim().split(',').join('","') : '';
          items = items ? '["' + items + '"]' : '[]';
          //debugging('Blacklist.set(' + w + ', ' + v + ')', items);
-         localStorage.setItem('ficstyle_blacklist_' + w, items);
+         localStorage.setItem('ficstyle_blacklist', items);
          this.get();
       };
       Blacklist.get();
 
       var Blacklisting = {
-         ifMatch: function(w, t) {
-            for (var j = 0; j < BL[w].length; j++) {
-               var b = BL[w][j].trim().toLowerCase();
-               if (b.charAt(0) === '*') { // wildcards
-                  var part = b.split('*'),
-                  item = part[1];
-                  if (item.length && t.indexOf(item) !== -1) {
-                     return true;
-                  }
-               } else if (b.length && t === b) {
-                  return true;
+         ifMatch: function(t) {
+            for (var j = 0; j < BL.length; j++) {
+               var b = BL[j].trim().toLowerCase();
+               if (b.length) {
+                  var r = b.replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+                           .replace(/\*/g, '.*');
+                  var reg = new RegExp('^' + r + '$');
+                  //debugging('reg.test(' + t +') == ' + b, reg.test(t));
+                  if (r.length && reg.test(t)) return true;
                }
             }
             return false;
          },
          findMatch: function(w) {
-            //debugging('BL['+ w +'].length', BL[w].length);
-            if (!BL[w].length) return 'empty';
-
-            $('.' + w + ' .tag').each(function() {
+            $(Blacklist.where + ' ' + w).each(function() {
                var tag = $(this).text().trim().toLowerCase();
-               if (tag && Blacklisting.ifMatch(w, tag)) {
+               if (tag && Blacklisting.ifMatch(tag)) {
                   //debugging('Match Found', tag);
-                  $(this).closest(Blacklist.where).attr('data-visibility', 'hide');
-                  var reasons = $(this).closest(Blacklist.where).attr('data-reasons');
-                  //debugging('reasons', reasons);
-                  $(this).closest(Blacklist.where).attr('data-reasons',
-                     reasons ? reasons.trim() + ', ' + tag : tag
-                  );
-                  //debugging('reasons', $(this).closest('.work.blurb.group').attr('data-reasons'));
+                  if (Blacklist.show) {
+                     $(this).closest(Blacklist.where).attr('data-visibility', 'hide');
+                     var reasons = $(this).closest(Blacklist.where).attr('data-reasons');
+                     $(this).closest(Blacklist.where).attr('data-reasons',
+                        (!reasons) ? tag : reasons.trim() + ', ' + tag
+                     );
+                     //debugging('reasons', $(this).closest('.work.blurb.group').attr('data-reasons'));
+                  } else {
+                     $(this).closest(Blacklist.where).attr('data-visibility', 'remove');
+                  }
                }
             });
          },
          addReasons: function() {
             $(Blacklist.where + '[data-reasons]').each(function() {
-               $(this).find('.fandoms.heading').html('<span>blacklisted</span> ' + $(this).attr('data-reasons'));
+               $(this).find('h4.heading').after('<h5 class="fandoms heading reasons"><span>blacklisted</span> ' + $(this).attr('data-reasons') + '</h5>');
             });
          },
          clear: function() {
-            if ($(Blacklist.where + '[data-visibility]').length) {
-               $(Blacklist.where + '[data-visibility]').each(function() {
-                  $(this).attr('data-visibility', '');
-                  $(this).attr('data-reasons', '');
-               });
-            }
+            $(Blacklist.where + '[data-visibility]').each(function() {
+               $(this).removeAttr('data-visibility');
+               $(this).removeAttr('data-reasons');
+               if (Blacklist.show) $(this).find('.reasons').remove();
+            });
          },
          search: function() {
             this.clear();
+            if (!BL.length) return 'empty';
             for (var i = 0; i < Blacklist.what.length; i++) {
                this.findMatch(Blacklist.what[i]);
             }
-            this.addReasons();
+            if (Blacklist.show) this.addReasons();
          },
          updateTextareas: function() {
-            for (var i = 0; i < Blacklist.what.length; i++) {
-               var values = BL[Blacklist.what[i]].toString();
-               $('#ta-' + Blacklist.what[i]).val(values);
-               //debugging('saveTextareas] [ficstyle_blacklist_' + Blacklist.what[i], items);
-               Blacklist.set(Blacklist.what[i], values);
-            }
+            var values = BL.toString();
+            //debugging('saveTextareas] [ficstyle_blacklist', values);
+            $('#fs-blacklist').val(values);
+            Blacklist.set(values);
             this.search();
          },
          saveTextareas: function() {
-            for (var i = 0; i < Blacklist.what.length; i++) {
-               var values = $('#ta-' + Blacklist.what[i]).val();
-               Blacklist.set(Blacklist.what[i], values);
-               //debugging('saveTextareas] [ficstyle_blacklist_' + Blacklist.what[i], items);
-            }
+            //debugging('saveTextareas] [ficstyle_blacklist'], $('#fs-blacklist').val());
+            Blacklist.set($('#fs-blacklist').val());
             this.search();
          }
       };
 
       addCSS('ficstyle-blacklist',
-         '#fs-save-ta {color: #900!important; font-weight: bold; text-align: center; } ' +
-         '#menu-blacklist textarea { font-size: 1em; line-height: 1em; margin: 0 .5em .1em; padding: .3em; border: 0; box-sizing: border-box; min-height: 5.3em; box-shadow: 0 0 0 1px #888; width: calc(19em - 7px); resize: vertical; } ' +
+         '#menu-blacklist ul li { text-align: center!important; }' +
+         '#fs-save-ta {color: #900!important; font-weight: bold; } ' +
+         '#menu-blacklist textarea { font-size: .9em; line-height: 1.2em; min-height: 10em; margin: .5em!important; padding: .3em; box-shadow: 0 0 0 1px #888; width: calc(100% - 1em); border: 0; box-sizing: border-box; resize: vertical; } ' +
+         '#menu-blacklist .fs-black-info { font-size: .9em; font-variant: small-caps; }' +
+         '#menu-blacklist .fs-black-info span { padding: 0 2em; }' +
 
+         Blacklist.where + '[data-visibility="remove"] { display: none; } ' +
          Blacklist.where + '[data-visibility="hide"] { opacity: .6; } ' +
          Blacklist.where + '[data-visibility="hide"] > *:not(.header), ' +
-         Blacklist.where + '[data-visibility="hide"] .required-tags { display: none; }' +
+         Blacklist.where + '[data-visibility="hide"] .required-tags, ' +
+         Blacklist.where + '[data-visibility="hide"] .fandoms.heading:not(.reasons) { display: none; }' +
          Blacklist.where + '[data-visibility="hide"] > .header { margin: 0!important; }' +
-         Blacklist.where + '[data-visibility="hide"] .fandoms.heading > span { color: #fff; background-color: #900; padding: 0 .2em; } '
+         Blacklist.where + '[data-visibility="hide"] .reasons > span { color: #fff; background-color: #900; padding: 0 .2em; } '
       );
 
-      $('#header > ul').append('<li id="menu-blacklist" class="dropdown" aria-haspopup="true"><a>Blacklist</a><ul class="menu dropdown-menu" role="menu"><li role="menu-item"><a id="fs-save-ta">SAVE</a></li></ul></li>');
-      for (var i = 0; i < Blacklist.what.length; i++) {
-         $('#menu-blacklist > ul.menu').append('<li role="menu-item"><a>tags: ' + Blacklist.what[i] + '</a><textarea id="ta-' +  Blacklist.what[i] + '"></textarea></li>');
-      }
-
+      $('#header > ul').append('<li id="menu-blacklist" class="dropdown" aria-haspopup="true"><a>Blacklist</a><ul class="menu dropdown-menu" role="menu">' +
+         '<li role="menu-item"><a id="fs-save-ta">SAVE</a></li>' +
+         '<li role="menu-item"><textarea id="fs-blacklist"></textarea></li>' +
+         '<li role="menu-item"><div class="fs-black-info"><span>separator: ,</span><span>wildcard: *</span></li>' +
+         '<li role="menu-item"><a id="fs-blacklist-show">Hide blacklisted works</a>' +
+         '</ul></li>');
+      if (!Blacklist.show) $('#fs-blacklist-show').text('Show reasons for blacklisting');
       Blacklisting.updateTextareas();
 
       $('#fs-save-ta').on('click', function() {
          Blacklisting.saveTextareas();
          $(this).text('SAVED');
          setTimeout(function(){ $('#fs-save-ta').text('SAVE'); }, 1000);
+      });
+
+      $('#fs-blacklist-show').on('click', function() {
+         if (Blacklist.show) {
+            Blacklist.show = false;
+            $('#fs-blacklist-show').text('Show reasons for blacklisting');
+         } else {
+            Blacklist.show = true;
+            $('#fs-blacklist-show').text('Hide blacklisted works');
+         }
+         localStorage.setItem('ficstyle_blacklist_show', Blacklist.show);
+         Blacklisting.search();
       });
 
    } // end search page
@@ -405,9 +418,9 @@
          var chTexts = $('#chapters > .chapter > div.userstuff.module');
          chTexts.each(function() {
             var text = $(this).text().replace(/(\s-\s)|(-)/g, '').replace(/[\."“”?!\)\(]/g, ' ');
-            ////debugging('wordsChapter', text);
+            //debugging('wordsChapter', text);
             var words = text.match(/\S+\s/g);
-            ////debugging('wordsChapter', words.join(' | '));
+            //debugging('wordsChapter', words.join(' | '));
             var numWords = words.length  - 2;// -2 because of <h3 class="landmark" heading id="work">Chapter Text</h3>
             $(this).siblings('.chapter.preface.group[role="complementary"]').before(
                '<div class="chapterWords">this chapter has ' + numWords + ' words (time: ' + countTime(numWords) + ')</div>'
