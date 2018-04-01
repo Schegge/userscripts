@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         AO3: Fic's Style, Blacklist, Bookmarks
-// @namespace    http://schegge.github.io/
+// @namespace    https://github.com/Schegge
 // @version      3.0
 // @description  Change font, size, width, background... of a work + number of words for each chapter and estimated reading time + blacklist/savior: hide works that contain certains tags + fullscreen reading mode + bookmarks: save the position you stopped reading a fic
 // @author       Schegge
@@ -28,7 +28,7 @@
             localStorage.setItem('ficstyle_bookmarks', bookmarks);
          }
          //debugging('getBooks', JSON.parse(bookmarks));
-         return JSON.parse(bookmarks.trim());
+         return JSON.parse(bookmarks);
       },
       getUrl: window.location.pathname.split('/works/')[1], // work id
       getTitle: function() {
