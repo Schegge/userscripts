@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Viki: Subtitles Settings
 // @namespace    https://github.com/Schegge
-// @version      1.0
+// @version      1.0.2
 // @description  Change subtitles font, size, color, shadow and background
 // @author       Schegge
 // @include      https://www.viki.com/videos/*
@@ -10,19 +10,31 @@
 
 (function() {
 	// default values
-	var config = {
+	var defValues = {
 		size: '1.45em',
 		font: 'sans-serif',
 		color: '#fff',
-		shadow: 'rgba(34, 34, 34, 1)', // #222
-		background: 'rgba(0, 0, 0, 0)', // transparent
-		bottom: '10%' // distance from the bottom of the video
+		shadow: 'rgba(0, 0, 0, .6)',
+		background: 'transparent',
+		bottom: '10%',
+		width: '100'
 	};
+
+	var config = JSON.parse(JSON.stringify(defValues));
 
 	// saved values
 	var saved = localStorage.getItem('sub_style');
-	if (saved) config = JSON.parse(saved);
+	if (saved) {
+		saved = JSON.parse(saved);
+		for (var s in config) { // in case i'm going to change/add options
+			if (saved[s]) config[s] = saved[s];
+		}
+	}
+
+	// add css changes
+	var style = document.createElement('style');
 	addCSS();
+	document.getElementsByTagName('head')[0].appendChild(style);
 
 	// HTML for options
 	var options = document.createElement('div');
@@ -34,45 +46,45 @@
 	// the save button
 	var save = document.createElement('div');
 	save.setAttribute('id', 'vs-save');
+	save.setAttribute('class', 'btn-simple strong');
 	save.innerText = 'SAVE';
 	options.appendChild(save);
-
 	// add options to the page
 	document.querySelector('.video-lists-tab-content').insertBefore(options, document.querySelector('.next-episode-card'));
 
 	// save changes
 	save.addEventListener('click', function() {
 		for (var c in config) {
-			config[c] = document.getElementById('vs-' + c).value;
+			if (document.getElementById('vs-' + c).value.trim().length) {
+				config[c] = document.getElementById('vs-' + c).value;
+			} else {
+				config[c] = defValues[c];
+				document.getElementById('vs-' + c).value = config[c];
+			}
 		}
 		addCSS();
 		localStorage.setItem('sub_style', JSON.stringify(config));
+		save.innerText = 'SAVED';
+		setTimeout(function() { save.innerText = 'SAVE'; }, 1000);
 	}, false);
 
 	// add css function
 	function addCSS() {
-		var css = '.vjs-text-track-display { bottom: 0px !important } ' +
+		style.innerHTML = '.vjs-text-track-display { bottom: 0px !important } ' +
+		'.vjs-fullscreen .vjs-text-track-display > div > div > div { ' +
+		'font-size: ' + config.size + ' !important; }' +
 		'.vjs-text-track-display > div > div { ' +
 		'font-size: ' + config.size + ' !important; ' +
 		'font-family: ' + config.font + ' !important; ' +
 		'top: auto !important;' +
-		'bottom: '+ config.bottom + ' !important }' +
+		'bottom: '+ config.bottom + ' !important; ' +
+		'padding: 0 ' + ((100 - parseInt(config.width)) / 2)  + '%; }' +
 		'.vjs-text-track-display > div > div > div { ' +
 		'color: ' + config.color + ' !important;' +
-		'text-shadow:  2px 2px 3px ' + config.shadow + ', 2px 2px 4px ' + config.shadow + ', 2px 2px 5px ' + config.shadow + ' !important;' +
+		'text-shadow:  -1px -1px 1px ' + config.shadow + ', 2px 2px 1px ' + config.shadow + ', 2px 2px 3px ' + config.shadow + ', 2px 2px 4px ' + config.shadow + ' !important;' +
 		'background-color: ' + config.background + ' !important; } ' +
 		'#vs-options { text-align: right; } ' +
 		'#vs-options input { display: inline; width: 70%; padding: 0 .5em; margin: 0; font-size: .9em; font-family: consolas, monospace; } ' +
-		'#vs-save { cursor: pointer; font-weight: bold; color: #0C9BFF; } ';
-
-		var style = document.getElementById('vs-style');
-		if (style) {
-			style.innerHTML = css;
-		}  else {
-			style = document.createElement('style');
-			style.innerHTML = css;
-			style.setAttribute('id', 'vs-style');
-			document.getElementsByTagName('head')[0].appendChild(style);
-		}
+		'#vs-save { padding: .2em 1.5em 0 0; } ';
 	}
 })();
