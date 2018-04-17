@@ -1,7 +1,7 @@
 # Userscripts
 My userscripts written in javascript / jQuery
 
-- AO3 Fic's Style and Bookmarks
+- AO3 Fic's Style Blacklist Bookmarks
 - Block Youtube Users
 - EFP Controllo Automatico Storie Seguite
 - Viki Subtitles Settings
