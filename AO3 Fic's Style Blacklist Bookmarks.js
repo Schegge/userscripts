@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AO3: Fic's Style, Blacklist, Bookmarks
 // @namespace    https://github.com/Schegge
-// @version      3.2
+// @version      3.2.1
 // @description  Change font, size, width, background... of a work + number of words for each chapter and estimated reading time + blacklist/savior: hide works that contain certains tags + fullscreen reading mode + bookmarks: save the position you stopped reading a fic
 // @author       Schegge
 // @include      http*://archiveofourown.org/*
@@ -159,7 +159,7 @@
    if (document.querySelector(Blacklist.where) && !user) {
       var BL = [];
       Blacklist.what = '.tags .tag, .required-tags span:not(.warnings) span.text';
-      Blacklist.show = localStorage.getItem('ficstyle_blacklist_show') || true;
+      Blacklist.show = localStorage.getItem('ficstyle_blacklist_show') || 'true';
       Blacklist.get = function() {
          if (localStorage.getItem('ficstyle_blacklist')) BL = JSON.parse(localStorage.getItem('ficstyle_blacklist'));
       };
@@ -177,13 +177,11 @@
          '#menu-blacklist textarea { font-size: .9em; line-height: 1.2em; min-height: 10em; margin: .5em!important; padding: .3em; box-shadow: 0 0 0 1px #888; width: calc(100% - 1em); border: 0; box-sizing: border-box; resize: vertical; } ' +
          '#menu-blacklist .fs-black-info { font-size: .9em; font-variant: small-caps; }' +
          '#menu-blacklist .fs-black-info span { padding: 0 2em; }' +
-         Blacklist.where + '[data-visibility="remove"] { display: none; } ' +
-         Blacklist.where + '[data-visibility="hide"] { opacity: .6; } ' +
-         Blacklist.where + '[data-visibility="hide"] > *:not(.header), ' +
-         Blacklist.where + '[data-visibility="hide"] .required-tags, ' +
-         Blacklist.where + '[data-visibility="hide"] .fandoms.heading:not(.reasons) { display: none; }' +
-         Blacklist.where + '[data-visibility="hide"] > .header { margin: 0!important; }' +
-         Blacklist.where + '[data-visibility="hide"] .reasons > span { color: #fff; background-color: #900; padding: .1em .2em 0; } '
+         '[data-visibility="remove"], [data-visibility="hide"] > *:not(.header), [data-visibility="hide"] ul.required-tags, [data-visibility="hide"] .fandoms.heading { display: none!important; } ' +
+         '[data-visibility="hide"] { opacity: .6; } ' +
+         '[data-visibility="hide"] > .header, [data-visibility="hide"] .header .heading { margin: 0!important; min-height: auto; font-size: .9em; font-style: italic; }' +
+         '[data-visibility="hide"] .reasons > span { color: #fff; background-color: #900; padding: .1em .2em 0; } ' +
+         '[data-visibility="hide"]::before { content: "Blacklisted | " attr(data-reasons); } '
       );
 
       // Blacklist's menu
@@ -196,7 +194,7 @@
          '<li role="menu-item"><div class="fs-black-info"><span>separator: ,</span><span>wildcard: *</span></li>' +
          '<li role="menu-item"><a id="fs-blacklist-show">Hide blacklisted works</a></ul>';
       document.querySelector('#header > ul').appendChild(blMenu);
-      if (!Blacklist.show) document.getElementById('fs-blacklist-show').textContent = 'Show reasons for blacklisting';
+      if (Blacklist.show === 'false') document.getElementById('fs-blacklist-show').textContent = 'Show reasons for blacklisting';
 
       // blacklisting
       var Blacklisting = {
@@ -212,7 +210,7 @@
             for (let i = 0, len = whereWhat.length; i < len; i++) {
                let tag = whereWhat[i].textContent.trim();
                if (tag && this.ifMatch(tag)) {
-                  if (Blacklist.show) {
+                  if (Blacklist.show === 'true') {
                      whereWhat[i].closest(Blacklist.where).setAttribute('data-visibility', 'hide');
                      let reasons = whereWhat[i].closest(Blacklist.where).getAttribute('data-reasons');
                      whereWhat[i].closest(Blacklist.where).setAttribute('data-reasons', !reasons ? tag : reasons + ', ' + tag);
@@ -222,26 +220,16 @@
                }
             }
          },
-         addReasons: function() {
-            var whereReasons = document.querySelectorAll(Blacklist.where + '[data-reasons]');
-            for (let i = 0, len = whereReasons.length; i < len; i++) {
-               whereReasons[i].querySelector('h4.heading').insertAdjacentHTML('afterend', '<h6 class="fandoms heading reasons"><span>blacklisted</span> ' + whereReasons[i].getAttribute('data-reasons') + '</h6>');
-            }
-         },
          clear: function() {
             document.querySelectorAll(Blacklist.where + '[data-visibility]').forEach(function(el) {
                el.removeAttribute('data-visibility');
-               if (Blacklist.show) {
-                  el.removeAttribute('data-reasons');
-                  el.querySelector('.reasons').remove();
-               }
+               el.removeAttribute('data-reasons');
             });
          },
          search: function() {
             this.clear();
             if (!BL.length) return;
             this.findMatch();
-            if (Blacklist.show) this.addReasons();
          },
          updateTextareas: function() {
             document.getElementById('fs-blacklist').value = BL.toString();
@@ -263,11 +251,11 @@
       });
 
       document.getElementById('fs-blacklist-show').addEventListener('click', function() {
-         if (Blacklist.show) {
-            Blacklist.show = false;
+         if (Blacklist.show === 'true') {
+            Blacklist.show = 'false';
             this.textContent = 'Show reasons for blacklisting';
          } else {
-            Blacklist.show = true;
+            Blacklist.show = 'true';
             this.textContent = 'Hide blacklisted works';
          }
          localStorage.setItem('ficstyle_blacklist_show', Blacklist.show);
