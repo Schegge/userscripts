@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AO3: Fic's Style, Blacklist, Bookmarks
 // @namespace    https://github.com/Schegge
-// @version      3.2.1
+// @version      3.3
 // @description  Change font, size, width, background... of a work + number of words for each chapter and estimated reading time + blacklist/savior: hide works that contain certains tags + fullscreen reading mode + bookmarks: save the position you stopped reading a fic
 // @author       Schegge
 // @include      http*://archiveofourown.org/*
@@ -10,47 +10,20 @@
 // ==/UserScript==
 
 (function() {
-   // CSS changes
-   function addCSS(id, css) {
-      if (!document.querySelector('style#' + id)) {
-         let style = document.createElement('style');
-         style.id = id;
-         style.textContent = css;
-         document.getElementsByTagName('head')[0].appendChild(style);
-      } else {
-         document.querySelector('style#' + id).textContent = css;
-      }
-   }
-
-   // estimate reading time: 200 wpm
-   function countTime(num) {
-      let time = (parseInt(num, 10) / 200 / 60).toFixed(2).toString().split('.');
-      return (time[0] !== '0' ? time[0] + 'hr ' : '') + Math.round(parseInt(time[1], 10) / 100 * 60) + 'min';
-   }
-
-   function getScroll() {
-      return Math.max(document.documentElement.scrollTop, window.scrollY);
-   }
-   function setScroll(s) {
-      window.scroll(0, s ? s : 0);
-   }
-   function getDocHeight() {
-      return Math.max(document.documentElement.scrollHeight, document.documentElement.offsetHeight, document.body.scrollHeight, document.body.offsetHeight);
-   }
+   var ver = getStorage('ficstyle_version', '1');
 
    // BOOKMARKS
-   var BM = [];
    var Bookmarks = {
+      list: [],
       get: function() {
-         if (localStorage.getItem('ficstyle_bookmarks')) BM = JSON.parse(localStorage.getItem('ficstyle_bookmarks'));
+         this.list = getStorage('ficstyle_bookmarks', '[]');
       },
       set: function() {
-         localStorage.setItem('ficstyle_bookmarks', JSON.stringify(BM));
+         setStorage('ficstyle_bookmarks', this.list);
       },
       getUrl: window.location.pathname.split('/works/')[1],
       getTitle: function() {
          let title = document.querySelector('#workskin .preface.group h2.title.heading').textContent;
-         // cut long titles
          title = title.trim().substring(0, 28);
          // if chapter by chapter, get the number of the chapter
          if (this.getUrl.indexOf('chapters') !== -1) {
@@ -71,15 +44,15 @@
       },
       checkIfExist: function(a, b) {
          let url = b || this.getUrl;
-         for (let i = 0; i < BM.length; i++) {
+         for (let i = 0; i < this.list.length; i++) {
             // if the same fic
-            if (BM[i][0].split('/chapters/')[0] === url.split('/chapters/')[0]) {
+            if (this.list[i][0].split('/chapters/')[0] === url.split('/chapters/')[0]) {
                if (a === 'cancel') {
                   return i;
                // if the same chapter
-               } else if (BM[i][0] === url) {
+               } else if (this.list[i][0] === url) {
                   if (a === 'book') {
-                     let book = BM[i][2];
+                     let book = this.list[i][2];
                      if (book.toString().indexOf('%') !== -1) {
                         book = parseFloat(book.replace('%', ''));
                         book *= getDocHeight();
@@ -94,11 +67,11 @@
       },
       cancel: function(url) {
          let found = this.checkIfExist('cancel', url);
-         if (found !== false) BM.splice(found, 1);
+         if (found !== false) this.list.splice(found, 1);
       },
       getNew: function() {
 			this.cancel();
-         BM.push([this.getUrl, this.getTitle(), this.getNewBook()]);
+         this.list.push([this.getUrl, this.getTitle(), this.getNewBook()]);
          this.set();
       }
    };
@@ -121,7 +94,7 @@
    bmMenu.appendChild(bmMenuDrop);
    document.querySelector('#header > ul').appendChild(bmMenu);
 
-   if (BM.length) {
+   if (Bookmarks.list.length) {
       let clickDelete = function() {
          Bookmarks.cancel(this.getAttribute('data-url'));
          Bookmarks.set();
@@ -129,13 +102,13 @@
          this.previousSibling.style.opacity = '.4';
       };
 
-      for (let z = 0; z < BM.length; z++) {
+      for (let z = 0; z < Bookmarks.list.length; z++) {
          let bmLi = document.createElement('li');
-         bmLi.innerHTML = '<a href="https://archiveofourown.org/works/' + BM[z][0] + '">' + BM[z][1] + '</a>';
+         bmLi.innerHTML = '<a href="https://archiveofourown.org/works/' + Bookmarks.list[z][0] + '">' + Bookmarks.list[z][1] + '</a>';
          let deleteBookMenu = document.createElement('a');
          deleteBookMenu.className = 'delete-book-menu';
          deleteBookMenu.title = 'delete bookmark';
-         deleteBookMenu.setAttribute('data-url', BM[z][0]);
+         deleteBookMenu.setAttribute('data-url', Bookmarks.list[z][0]);
          deleteBookMenu.textContent = 'x';
          deleteBookMenu.addEventListener('click', clickDelete);
          bmLi.appendChild(deleteBookMenu);
@@ -155,115 +128,117 @@
    let user = document.querySelector('#greeting .user a[href*="/users/"]');
    user = user ? window.location.pathname.indexOf(user.href.split('/users/')[1]) !== -1 : false;
 
-   var Blacklist = {where: 'li.blurb.group'};
-   if (document.querySelector(Blacklist.where) && !user) {
-      var BL = [];
-      Blacklist.what = '.tags .tag, .required-tags span:not(.warnings) span.text';
-      Blacklist.show = localStorage.getItem('ficstyle_blacklist_show') || 'true';
-      Blacklist.get = function() {
-         if (localStorage.getItem('ficstyle_blacklist')) BL = JSON.parse(localStorage.getItem('ficstyle_blacklist'));
-      };
-      Blacklist.set = function(v) {
-         let items = v ? '["' + v.trim().replace(/[\\"]/g, '\\$&').replace(/\n/g, '\\n').split(',').join('","') + '"]' : '[]';
-         localStorage.setItem('ficstyle_blacklist', items);
-         this.get();
-      };
-      Blacklist.get();
-
-      addCSS(
-         'ficstyle-blacklist',
-         '#menu-blacklist ul li { text-align: center!important; }' +
-         '#fs-save-ta {color: #900!important; font-weight: bold; } ' +
-         '#menu-blacklist textarea { font-size: .9em; line-height: 1.2em; min-height: 10em; margin: .5em!important; padding: .3em; box-shadow: 0 0 0 1px #888; width: calc(100% - 1em); border: 0; box-sizing: border-box; resize: vertical; } ' +
-         '#menu-blacklist .fs-black-info { font-size: .9em; font-variant: small-caps; }' +
-         '#menu-blacklist .fs-black-info span { padding: 0 2em; }' +
-         '[data-visibility="remove"], [data-visibility="hide"] > *:not(.header), [data-visibility="hide"] ul.required-tags, [data-visibility="hide"] .fandoms.heading { display: none!important; } ' +
-         '[data-visibility="hide"] { opacity: .6; } ' +
-         '[data-visibility="hide"] > .header, [data-visibility="hide"] .header .heading { margin: 0!important; min-height: auto; font-size: .9em; font-style: italic; }' +
-         '[data-visibility="hide"] .reasons > span { color: #fff; background-color: #900; padding: .1em .2em 0; } ' +
-         '[data-visibility="hide"]::before { content: "Blacklisted | " attr(data-reasons); } '
-      );
-
-      // Blacklist's menu
-      var blMenu = document.createElement('li');
-      blMenu.id = 'menu-blacklist';
-      blMenu.className = 'dropdown';
-      blMenu.innerHTML = '<a>Blacklist</a><ul class="menu dropdown-menu" role="menu">' +
-         '<li role="menu-item"><a id="fs-save-ta">SAVE</a></li>' +
-         '<li role="menu-item"><textarea id="fs-blacklist"></textarea></li>' +
-         '<li role="menu-item"><div class="fs-black-info"><span>separator: ,</span><span>wildcard: *</span></li>' +
-         '<li role="menu-item"><a id="fs-blacklist-show">Hide blacklisted works</a></ul>';
-      document.querySelector('#header > ul').appendChild(blMenu);
-      if (Blacklist.show === 'false') document.getElementById('fs-blacklist-show').textContent = 'Show reasons for blacklisting';
-
-      // blacklisting
-      var Blacklisting = {
+   if (document.querySelector('li.blurb.group') && !user) {
+      var Blacklist = {
+         list: [],
+         opts: {},
+         where: 'li.blurb.group',
+         what: '.tags .tag, .required-tags span:not(.warnings) span.text, .header .fandoms .tag',
+         get: function() {
+            this.list = getStorage('ficstyle_blacklist', '[]');
+            this.opts = getStorage('ficstyle_blacklist_opts', '{"show":true,"maxFandoms":0,"maxRelations":0}');
+         },
+         set: function(v) {
+            this.list = v.list.trim() ? JSON.parse('["' + v.list.trim().replace(/[\\"]/g, '\\$&').replace(/\n/g, '\\n').split(',').join('","') + '"]') : [];
+            setStorage('ficstyle_blacklist', this.list);
+            this.opts.show = v.show;
+            this.opts.maxFandoms = v.maxFandoms ? Math.max(parseInt(v.maxFandoms, 10), 0) : 0;
+            this.opts.maxRelations = v.maxRelations ? Math.max(parseInt(v.maxRelations, 10), 0) : 0;
+            setStorage('ficstyle_blacklist_opts', this.opts);
+         },
+         findFandoms: function(w) {
+            if (!this.opts.maxFandoms) return false;
+            return w.querySelectorAll('.header .fandoms .tag').length > this.opts.maxFandoms;
+         },
+         findRelations: function(w) {
+            if (!this.opts.maxRelations) return false;
+            return w.querySelectorAll('.tags .relationships .tag').length > this.opts.maxRelations;
+         },
+         findTags: function(w) {
+            return Array.prototype.map.call(w.querySelectorAll(this.what), function(t) {
+               return t.textContent.trim();
+            });
+         },
          ifMatch: function(t) {
-            return BL.some(function(b) {
-               b = b.trim().replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
+            return this.list.some(function(b) {
+               b = b.trim().replace(/[.+?^${}()|[\]\\]/g, '\\$&');
+               b = b.replace(/\*/g, '.*'); // wildcard
+               b = b.replace(/(.+)&&(.+)/, '(?=.*$1)(?=.*$2).*'); // match 2 words in any order
                let reg = new RegExp('^' + b + '$', 'i');
                return reg.test(t) === true;
             });
          },
          findMatch: function() {
-            var whereWhat = document.querySelectorAll(Blacklist.what);
-            for (let i = 0, len = whereWhat.length; i < len; i++) {
-               let tag = whereWhat[i].textContent.trim();
-               if (tag && this.ifMatch(tag)) {
-                  if (Blacklist.show === 'true') {
-                     whereWhat[i].closest(Blacklist.where).setAttribute('data-visibility', 'hide');
-                     let reasons = whereWhat[i].closest(Blacklist.where).getAttribute('data-reasons');
-                     whereWhat[i].closest(Blacklist.where).setAttribute('data-reasons', !reasons ? tag : reasons + ', ' + tag);
-                  } else {
-                     whereWhat[i].closest(Blacklist.where).setAttribute('data-visibility', 'remove');
-                  }
+            if (!this.list.length) return;
+            document.querySelectorAll(this.where).forEach(function(w) {
+               if (this.opts.show) {
+                  let reasons = this.findTags(w).filter(this.ifMatch, this);
+                  if (this.findRelations(w)) reasons.unshift('#Relationships');
+                  if (this.findFandoms(w)) reasons.unshift('#Fandoms');
+                  if (!reasons.length) return;
+                  w.setAttribute('data-visibility', 'hide');
+                  w.setAttribute('data-reasons', reasons.join(', '));
+               } else {
+                  if (!this.findTags(w).some(this.ifMatch, this) && !this.findFandoms(w) && !this.findRelations(w)) return;
+                  w.setAttribute('data-visibility', 'remove');
                }
-            }
+            }, this);
          },
          clear: function() {
-            document.querySelectorAll(Blacklist.where + '[data-visibility]').forEach(function(el) {
+            document.querySelectorAll(this.where + '[data-visibility]').forEach(function(el) {
                el.removeAttribute('data-visibility');
                el.removeAttribute('data-reasons');
             });
          },
-         search: function() {
+         save: function() {
+            this.set({
+               list: document.getElementById('fs-blacklist').value,
+               show: document.getElementById('fs-blacklist-show').checked,
+               maxFandoms: document.getElementById('fs-blacklist-maxFandoms').value,
+               maxRelations: document.getElementById('fs-blacklist-maxRelations').value
+            });
             this.clear();
-            if (!BL.length) return;
             this.findMatch();
-         },
-         updateTextareas: function() {
-            document.getElementById('fs-blacklist').value = BL.toString();
-            this.search();
-         },
-         saveTextareas: function() {
-            Blacklist.set(document.getElementById('fs-blacklist').value);
-            this.search();
          }
       };
-      Blacklisting.updateTextareas();
+      Blacklist.get();
+      Blacklist.findMatch();
 
-      document.getElementById('fs-save-ta').addEventListener('click', function() {
-         Blacklisting.saveTextareas();
-         this.textContent = 'SAVED';
-         setTimeout(function() {
-            document.getElementById('fs-save-ta').textContent = 'SAVE';
-         }, 1000);
+      addCSS(
+         'ficstyle-blacklist',
+         '#menu-blacklist ul li { text-align: center!important; }' +
+         '#menu-blacklist span { font-size: .85em; } ' +
+         '#fs-black-save {color: #900!important; font-weight: bold; } ' +
+         '.fs-black-opts { font-variant: small-caps; display: flex; flex-wrap: wrap; } ' +
+         '.fs-black-opts span:first-child { width: 100%; } ' +
+         '.fs-black-opts span, #menu-blacklist .fs-black-info span { flex: auto; } ' +
+         '.fs-black-info { font-variant: small-caps; display: flex; flex-wrap: nowrap; } ' +
+         '#menu-blacklist input[type="checkbox"] { margin-top: .1em; } ' +
+         '#menu-blacklist input[type="number"] { width: 3em; padding: 0 0 0 .2em; background: #fff; border: 0; box-shadow: 0 0 0 1px #888; border-radius: 0;box-sizing: border-box; } ' +
+         '#menu-blacklist textarea { font-size: .9em; line-height: 1.2em; min-height: 10em; margin: .5em!important; padding: .3em; box-shadow: 0 0 0 1px #888; width: calc(100% - 1em); border: 0; box-sizing: border-box; resize: vertical; } ' +
+         '[data-visibility="remove"], [data-visibility="hide"] > :not(.header), [data-visibility="hide"] > .header > :not(h4) { display: none!important; } ' +
+         '[data-visibility="hide"] { opacity: .6; } ' +
+         '[data-visibility="hide"] > .header, [data-visibility="hide"] > .header > h4 { margin: 0!important; min-height: auto; font-size: .9em; font-style: italic; }' +
+         '[data-visibility="hide"]::before { content: "Blacklisted | " attr(data-reasons); } '
+      );
+      // Blacklist's menu
+      var blMenu = document.createElement('li');
+      blMenu.id = 'menu-blacklist';
+      blMenu.className = 'dropdown';
+      blMenu.innerHTML = '<a>Blacklist</a><ul class="menu dropdown-menu" role="menu">' +
+         '<li role="menu-item"><a id="fs-black-save">SAVE</a></li>' +
+         '<li role="menu-item" style="padding: .5em 0;"><div class="fs-black-opts"><span>SHOW REASONS <input id="fs-blacklist-show" type="checkbox"' + (Blacklist.opts.show ? ' checked' : '') + '></span> <span>max fandoms <input id="fs-blacklist-maxFandoms" type="number" min="0" step="1" value="' + Blacklist.opts.maxFandoms + '"></span> <span><input id="fs-blacklist-maxRelations" type="number" min="0" step="1" value="' + Blacklist.opts.maxRelations + '"> max relations</span></div>' +
+         '<textarea id="fs-blacklist" spellcheck="false">' + Blacklist.list.join(',') + '</textarea>' +
+         '<div class="fs-black-info"><span>separator: ,</span><span title="*: match zero or more of any character (letter, white space, symbol...) [it can be used multiple times in the same tag]">wildcard: *</span><span title="&&: match two pair of words in any order [it can be used only once in the same tag]">matched pair: &&</span></div></li></ul>';
+      document.querySelector('#header > ul').appendChild(blMenu);
+
+      document.getElementById('fs-black-save').addEventListener('click', function() {
+         Blacklist.save();
+         let self = this;
+         self.textContent = 'SAVED';
+         setTimeout(function() { self.textContent = 'SAVE'; }, 1000);
       });
-
-      document.getElementById('fs-blacklist-show').addEventListener('click', function() {
-         if (Blacklist.show === 'true') {
-            Blacklist.show = 'false';
-            this.textContent = 'Show reasons for blacklisting';
-         } else {
-            Blacklist.show = 'true';
-            this.textContent = 'Hide blacklisted works';
-         }
-         localStorage.setItem('ficstyle_blacklist_show', Blacklist.show);
-         Blacklisting.search();
-      });
-
 	}
-	// end search page
 
    // FIC'S STYLE + FULLSCREEN + BOOKMARKING: ONLY ON WORK PAGES
    // include: /works/(numbers) and /works/(numbers)/chapters/(numbers) and exclude /works/(whatever)navigate
@@ -306,80 +281,66 @@
          '.chapterWords { font-size: .8em; color: inherit; font-family: consolas, monospace; text-transform: uppercase; text-align: center; margin: 3em 0 .5em; }'
       );
 
-      // default values
-      var Options = {
-         fontName: [
-            'inherit',
-            'Verdana',
-            'Segoe UI',
-            'Georgia',
-            'Garamond',
-            'Book Antiqua',
-            'monospace'
-			],
-			// (%) (min = 50; max = 300)
-			fontSize: 100,
-			// (%) (min = 0; max = 40)
-			padding: 7,
-         colors: {
-				// background, font color
-            light: ['#ffffff', '#000000'],
-            grey: ['#eeeeee', '#111111'],
-            sepia: ['#fbf0d9', '#54331b'],
-            dark: ['#3c3c3c', '#e1e1e1'],
-            darkblue: ['#282a36', '#f8f8e6']
-         }
-      };
-
       // CSS changes depending on the user
-      var Variables = {
+      var Styling = {
+         def: {
+            fontName: [
+               'inherit',
+               'Verdana',
+               'Segoe UI',
+               'Georgia',
+               'Garamond',
+               'Book Antiqua',
+               'monospace'
+            ],
+            colors: {
+               // background, font color
+               light: ['#ffffff', '#000000'],
+               grey: ['#eeeeee', '#111111'],
+               sepia: ['#fbf0d9', '#54331b'],
+               dark: ['#3c3c3c', '#e1e1e1'],
+               darkblue: ['#282a36', '#f8f8e6']
+            },
+            get: '{"fontName":"inherit","fontSize":100,"padding":7,"colors":"light"}'
+         },
          get: function() {
-            return localStorage.getItem('ficstyle') ? JSON.parse(localStorage.getItem('ficstyle')) : {
-               fontName: Options.fontName[0],
-               fontSize: Options.fontSize,
-               padding: Options.padding,
-               colors: Object.keys(Options.colors)[0]
-            };
+            return getStorage('ficstyle', this.def.get);
          },
          set: function(a, b) {
             let all = this.get();
-            if (a && b) {
-               all[a] = b;
-               localStorage.setItem('ficstyle', JSON.stringify(all));
-            }
+            if (a && b) all[a] = b;
+            setStorage('ficstyle', all);
             addCSS(
                'ficstyle-user-changes',
-               '#workskin { font-family: ' + all.fontName + '; font-size: ' + all.fontSize + '%; padding: 0 ' + all.padding + '%; background-color: ' + Options.colors[all.colors][0] + '; color: ' + Options.colors[all.colors][1] + '; } '
+               '#workskin { font-family: ' + all.fontName + '; font-size: ' + all.fontSize + '%; padding: 0 ' + all.padding + '%; background-color: ' + this.def.colors[all.colors][0] + '; color: ' + this.def.colors[all.colors][1] + '; } '
             );
          },
          reset: function() {
-            localStorage.removeItem('ficstyle');
+            setStorage('ficstyle', this.def.get);
             this.set();
-         }
-      };
-      Variables.set();
-
-      // to change options
-      var changeVar = function(a) {
-         // arguments : 0 name, 1 direction/increment, 2 type/limit
-         var pos = getScroll() / getDocHeight();
-         if (a.length > 1) {
-            var cur = Variables.get()[a[0]];
-            if (typeof a[2] === 'string') {
-               let arr = a[2] === 'obj' ? Object.keys(Options[a[0]]) : Options[a[0]];
-               let end = a[1] === 1 ? arr.length : -1;
-               let next = arr.indexOf(cur) + a[1];
-               cur = arr[next !== end ? next : arr.length - end * a[1]];
+         },
+         changeVar: function(a) {
+            // arguments : 0 name, 1 direction/increment, 2 type/limit
+            var pos = getScroll() / getDocHeight();
+            if (a.length > 1) {
+               var cur = this.get()[a[0]];
+               if (typeof a[2] === 'string') {
+                  let arr = a[2] === 'obj' ? Object.keys(this.def[a[0]]) : this.def[a[0]];
+                  let end = a[1] === 1 ? arr.length : -1;
+                  let next = arr.indexOf(cur) + a[1];
+                  cur = arr[next !== end ? next : arr.length - end * a[1]];
+               } else {
+                  cur += a[1];
+                  if (Math.sign(a[1]) * cur > a[2] * Math.sign(a[1])) cur = a[2];
+               }
+               this.set(a[0], cur);
             } else {
-               cur += a[1];
-               if (Math.sign(a[1]) * cur > a[2] * Math.sign(a[1])) cur = a[2];
+               this.reset();
             }
-            Variables.set(a[0], cur);
-         } else {
-            Variables.reset();
+            setScroll(pos * getDocHeight());
          }
-         setScroll(pos * getDocHeight());
       };
+      Styling.set();
 
       // the options displayed on the page
       var options = document.createElement('div');
@@ -408,7 +369,7 @@
                else this.parentElement.className = 'options-hide';
             });
          } else {
-            el.addEventListener('click', function() { changeVar(opt[i][2]); });
+            el.addEventListener('click', function() { Styling.changeVar(opt[i][2]); });
          }
       }
 
@@ -458,7 +419,7 @@
             '.no-book, .actions:not(.fictop) li > a:not([href*="chapters"]) { display: none; } ' +
             '.actions:not(.fictop) { margin-top: 2em; } ' +
             '.ficleft { left: 10px; } ' +
-            '.ficleft a { border: 0; color: #000; padding-right: .4em; } '
+            '.ficleft a { border: 0; color: #000; margin-right: .2em; padding: 0 .2em 0 .1em; } '
          );
 
          document.body.appendChild(workskin);
@@ -509,6 +470,49 @@
          workskin.appendChild(document.querySelector('#feedback .actions'));
       };
       toFullScreen.addEventListener('click', fullScreen);
-	}
-   // end fic page
+   }
+
+   // NEW VERSION NOTIFICATION
+   if (ver !== 33) {
+      setStorage('ficstyle_version', 33);
+      document.body.insertAdjacentHTML('beforeend', '<div style="position: fixed; bottom: 50px; right: 50px; width: 40%; z-index: 999;font-size: .8em; background: #fff; padding: 1em; border: 1px solid #900;"><b>AO3: Fic\'s Style, Blacklist, Bookmarks</b> v3.3<br>Blacklist:<br>- Now it searches also through fandoms.<br>- You can blacklist two pair of words with &&: it\'ll match any tag that contains at least the pair in any order. <code>Example: hermione&&snape, potter&&tom riddle</code><br>- You can choose to hide fanfictions with too many fandoms and/or too many relationships. To disable the options put 0 (zero) or leave them empty.<br><span id="fs-close" style="cursor: pointer; color: #900;">close</span>');
+      document.getElementById('fs-close').addEventListener('click', function() { this.parentElement.style.display = 'none'; });
+
+      localStorage.removeItem('ficstyle_blacklist_show');
+   }
+
+   // GLOBAL FUNCTIONS
+   function addCSS(id, css) {
+      if (!document.querySelector('style#' + id)) {
+         let style = document.createElement('style');
+         style.id = id;
+         style.textContent = css;
+         document.getElementsByTagName('head')[0].appendChild(style);
+      } else {
+         document.querySelector('style#' + id).textContent = css;
+      }
+   }
+
+   function countTime(num) {
+      // estimate reading time: 200 wpm
+      let time = (parseInt(num, 10) / 200 / 60).toFixed(2).toString().split('.');
+      return (time[0] !== '0' ? time[0] + 'hr ' : '') + Math.round(parseInt(time[1], 10) / 100 * 60) + 'min';
+   }
+
+   function getScroll() {
+      return Math.max(document.documentElement.scrollTop, window.scrollY);
+   }
+   function setScroll(s) {
+      window.scroll(0, s ? s : 0);
+   }
+   function getDocHeight() {
+      return Math.max(document.documentElement.scrollHeight, document.documentElement.offsetHeight, document.body.scrollHeight, document.body.offsetHeight);
+   }
+
+   function getStorage(key, def) {
+      return JSON.parse(localStorage.getItem(key) || def);
+   }
+   function setStorage(key, value) {
+      localStorage.setItem(key, typeof value !== 'string' ? JSON.stringify(value) : value);
+   }
 })();
