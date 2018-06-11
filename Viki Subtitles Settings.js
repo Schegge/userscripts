@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Viki: Subtitles Settings
 // @namespace    https://github.com/Schegge
-// @version      1.0.3
+// @version      1.0.4
 // @description  Change subtitles font, size, color, shadow and background
 // @author       Schegge
 // @include      https://www.viki.com/videos/*
@@ -80,19 +80,29 @@
 	// add css function
 	function addCSS() {
 		var padding = (100 - parseInt(config.width, 10)) / 2;
-		style.textContent = '.vjs-text-track-display { bottom: 0px !important } ' +
+      style.textContent = '.vjs-text-track-display { bottom: 0px !important } ' +
+
 		'.vjs-fullscreen .vjs-text-track-display > div > div > div { ' +
-		'font-size: ' + config.size + ' !important; }' +
+      'font-size: ' + config.size + ' !important; }' +
+
 		'.vjs-text-track-display > div > div { ' +
 		'font-size: ' + config.size + ' !important; ' +
+		'line-height: 1.75 !important; ' +
 		'font-family: ' + config.font + ' !important; ' +
+      'padding: 0 ' + padding + '%; }' +
+
+      'div.vjs-text-track-display > div { ' +
 		'top: auto !important;' +
-		'bottom: ' + config.bottom + ' !important; ' +
-		'padding: 0 ' + padding + '%; }' +
+		'bottom: ' + config.bottom + ' !important; }' +
+
 		'.vjs-text-track-display > div > div > div { ' +
-		'color: ' + config.color + ' !important;' +
+      'border-radius: 2px; ' +
+      '-webkit-box-decoration-break: clone; ' +
+      'box-decoration-break: clone; ' +
+      'color: ' + config.color + ' !important;' +
 		'text-shadow:  -1px -1px 1px ' + config.shadow + ', 2px 2px 1px ' + config.shadow + ', 2px 2px 3px ' + config.shadow + ', 2px 2px 4px ' + config.shadow + ' !important;' +
-		'background-color: ' + config.background + ' !important; } ' +
+      'background-color: ' + config.background + ' !important; }' +
+
 		'#vs-options { text-align: right; } ' +
 		'#vs-options input { display: inline; width: 70%; padding: 0 .5em; margin: 0; font-size: .9em; font-family: consolas, monospace; } ' +
 		'#vs-save { padding: .2em 1.5em 0 0; } ';
