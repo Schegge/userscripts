@@ -3,9 +3,10 @@
 // @author       Schegge
 // @namespace    https://github.com/Schegge
 // @description  Hide videos of blacklisted users/channels (from recommended, search, related channels...)
-// @version      2.4.3
+// @version      2.4.4
 // @match        *://www.youtube.com/*
 // @exclude      *://www.youtube.com/embed/*
+// @exclude      *://www.youtube.com/live_chat?*
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        GM.getValue
@@ -16,15 +17,17 @@
 // ==/UserScript==
 
 /** DESCRIPTION
-  - for both the new and the old youtube layout
-  - it is not case-sensitive
-  - it hides videos of blacklisted users/channels from recommended, search, related channels...
-  - also from the playlists/mixes, but it doesn't prevent them from playing if the playlist is in autoplay
-  - from a direct link to youtube, it pauses the video if blacklisted (you can enable/disable it)
-  - put a * in front of a word for wildcard (only in the blacklist), it will find the word no matter its position in the username (example: *vevo)
-  - you can choose the symbol to split the usernames (default is a comma, * and " not allowed, min-max 1 character)
-  - you can enable/disable to blacklist channels by clicking (old yt layout)/right clicking (new yt layout) on '[x]' before the usernames
-  - you can suspend temporarily the block (to reactivate it just click on save or refresh the page)
+- for both the new and the old youtube layout
+- it is not case-sensitive
+- it hides videos of blacklisted users/channels from recommended, search, related channels...
+ - also from the playlists/mixes, but it doesn't prevent them from playing if the playlist is in autoplay
+- put a * in front of a word for wildcard (only in the blacklist), it will find the word no matter its position in the username (example: *vevo, *buzzfeed)
+ - when you use it, but still you want continue seeing a channel that has that word in the name, you can put it in the whitelist (example -> balcklist: *buzzfeed; whitelist: BuzzFeed Nifty)
+- you can choose the symbol to split the usernames (default is a comma, * and " not allowed, min-max 1 character)
+- you can enable/disable to blacklist channels by clicking (old yt layout)/right clicking (new yt layout) on '[x]' before the usernames
+ - in any case, the [x] buttons are automatically shown when the "B" menu is open
+- from a direct link to youtube, it pauses the video if blacklisted (you can enable/disable it)
+- you can suspend temporarily the block (to reactivate it just click on save or refresh the page)
 **/
 
 (async function($) {
@@ -44,7 +47,8 @@
    }
    await getValues();
 
-   var byuver = await GM.getValue('byuver', '1');
+   var byuver = await GM.getValue('byuver', '2.4.4');
+   var bOpen = false;
    var suspend = false;
    var uClasses, tClasses, uVideo, margintop;
 
@@ -154,11 +158,11 @@
    /* BLACKLIST MENU */
 
    // changes' ver
-   if (byuver !== '2.4.3') {
-      byuver = '2.4.3';
+   if (byuver !== '2.4.4') {
+      byuver = '2.4.4';
       GM.setValue('byuver', byuver);
-      // $('body').append('<div style="position: fixed; z-index: 999999; width: 35%; min-width: 200px; font-size: 1em; padding: 1.5em; bottom: 50px; right: 50px; background: red; color: #fff; border-radius: 2px;">BLOCK YOUTUBE USERS [2.4.3]<br><br><span id="byu-notice-dismiss" style="cursor: pointer; color: red; background: #fff; border-radius: 2px; padding: 0 5px;">dismiss</span></div>');
-      // $('#byu-notice-dismiss').on('click', function() { $('#byu-notice-dismiss').parent().remove(); });
+      $('body').append('<div style="position: fixed; z-index: 999999; width: 35%; min-width: 200px; font-size: 1em; padding: 1.5em; bottom: 50px; right: 50px; color: red; background: #fff; border-radius: .5em; border: 1px solid red;">BLOCK YOUTUBE USERS [2.4.4]<br><br>The [x] buttons to blacklist channels are automatically shown when the "B" menu is open.<br><br><span id="byu-notice-dismiss" style="cursor: pointer; background: red; color: #fff; border-radius: 2px; padding: 0 5px;">dismiss</span></div>');
+      $('#byu-notice-dismiss').on('click', function() { $('#byu-notice-dismiss').parent().remove(); });
    }
 
    // menu
@@ -230,7 +234,7 @@
       if ((!same || newAdd) && ifMatch(username)) {
          $(el).closest(tClasses).attr('id', 'byu-is-black');
 
-      } else if (add && !$(el).siblings('.byu-add').length) {
+      } else if ((add || bOpen) && !$(el).siblings('.byu-add').length) {
          $('<span class="byu-add">[x]</span>').insertBefore($(el));
       }
 
@@ -250,6 +254,11 @@
    $('body').on('click', '#byu', function() {
       $('#byu-options').slideToggle();
       $(this).css('font-weight', $(this).css('font-weight') === '700' ? '400' : '700');
+      bOpen = bOpen ? false : true;
+      if (!add) {
+         if (bOpen) search();
+         else $('.byu-add').remove();
+      }
    });
 
    // save blacklist changes and research
