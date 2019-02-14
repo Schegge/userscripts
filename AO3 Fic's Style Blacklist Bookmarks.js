@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         AO3: Fic's Style, Blacklist, Bookmarks
 // @namespace    https://github.com/Schegge
-// @version      3.4.5
-// @description  Change font, size, width, background... of a work + number of words for each chapter and estimated reading time + blacklist/savior: hide works that contain certains tags + fullscreen reading mode + bookmarks: save the position you stopped reading a fic
+// @version      3.4.6
+// @description  Change font, size, width, background... of a work + blacklist/savior: hide works that contain certains tags, have too many fandoms/relations/chapters and other options + fullscreen reading mode + bookmarks: save the position you stopped reading a fic + number of words for each chapter and estimated reading time
 // @author       Schegge
 // @include      http*://archiveofourown.org/*
 // @grant        none
@@ -13,17 +13,17 @@
    var check = {
       // Script version
       version: function() {
-         if (getStorage('ficstyle_version', '345') !== 345) {
-            setStorage('ficstyle_version', 345);
+         if (getStorage('ficstyle_version', '346') !== 346) {
+            setStorage('ficstyle_version', 346);
             return true;
          }
          return false;
       },
-      // Blacklist: only on search pages but not on personal user profile
+      // Blacklist: on search pages but not on personal user profile
       black: function() {
          let user = document.querySelector('#greeting .user a[href*="/users/"]');
          user = user ? window.location.pathname.indexOf(user.href.split('/users/')[1]) !== -1 : false;
-         return document.querySelector('li.blurb.group') && !user;
+         return document.querySelector('li.blurb.group:not(.collection)') && !user;
       },
       // Fic's style + fullscreen + bookmarking: include /works/(numbers) and /works/(numbers)/chapters/(numbers) and exclude /works/(whatever)navigate
       work: function() {
@@ -150,23 +150,24 @@
       var Blacklist = {
          list: [],
          opts: {},
-         where: 'li.blurb.group',
+         where: 'li.blurb.group:not(.collection)',
          what: '.tags .tag, .required-tags span:not(.warnings) span.text, .header .fandoms .tag',
          get: function() {
             this.list = getStorage('ficstyle_blacklist', '[]');
             this.langs = getStorage('ficstyle_blacklist_langs', '[]');
-            this.opts = getStorage('ficstyle_blacklist_opts', '{"show":true,"pause":false,"maxFandoms":0,"maxRelations":0,"maxChapters":0}');
+            this.opts = getStorage('ficstyle_blacklist_opts', '{"show":true,"pause":false,"maxFandoms":0,"maxRelations":0,"maxChapters":0,"minIncomplete":0}');
          },
          set: function(v) {
             this.list = v.list.trim() ? JSON.parse('["' + v.list.trim().replace(/[\\"]/g, '\\$&').replace(/\n/g, '\\n').split(',').join('","') + '"]') : [];
             setStorage('ficstyle_blacklist', this.list);
-            this.langs = v.langs.trim() ? JSON.parse('["' + v.langs.trim().replace(/[\\"]/g, '\\$&').replace(/\n/g, '\\n').split(',').join('","') + '"]') : [];
+            this.langs = v.langs.trim() ? JSON.parse('["' + v.langs.trim().replace(/[\\"]/g, '\\$&').split(',').join('","') + '"]') : [];
             setStorage('ficstyle_blacklist_langs', this.langs);
             this.opts.show = v.show;
             this.opts.pause = v.pause;
             this.opts.maxFandoms = v.maxFandoms ? Math.max(parseInt(v.maxFandoms, 10), 0) : 0;
             this.opts.maxRelations = v.maxRelations ? Math.max(parseInt(v.maxRelations, 10), 0) : 0;
             this.opts.maxChapters = v.maxChapters ? Math.max(parseInt(v.maxChapters, 10), 0) : 0;
+            this.opts.minIncomplete = v.minIncomplete ? Math.max(parseInt(v.minIncomplete, 10), 0) : 0;
             setStorage('ficstyle_blacklist_opts', this.opts);
          },
          findFandoms: function(w) {
@@ -176,10 +177,16 @@
             return this.opts.maxRelations && w.querySelectorAll('.tags .relationships .tag').length > this.opts.maxRelations;
          },
          findChapters: function(w) {
-            return this.opts.maxChapters && parseInt(w.querySelector('dd.chapters').textContent.split('/')[0], 10) > this.opts.maxChapters;
+            return this.opts.maxChapters && w.querySelector('dd.chapters') && parseInt(w.querySelector('dd.chapters').textContent.split('/')[0], 10) > this.opts.maxChapters;
+         },
+         findIncomplete: function(w) {
+            if (!this.opts.minIncomplete || !w.querySelector('dd.chapters') || /(\d+)\/\1/.test(w.querySelector('dd.chapters').textContent)) return false;
+            let today = new Date();
+            let last = new Date(w.querySelector('.datetime').textContent);
+            return Math.abs(last.getTime() - today.getTime()) / (1000 * 3600 * 24 * 30.4) > this.opts.minIncomplete;
          },
          findLangs: function(w) {
-            return this.langs.length && this.langs.join(' ').toLowerCase().indexOf(w.querySelector('dd.language').textContent.toLowerCase().trim()) === -1;
+            return this.langs.length && w.querySelector('dd.language') && this.langs.join(' ').toLowerCase().indexOf(w.querySelector('dd.language').textContent.toLowerCase().trim()) === -1;
          },
          findTags: function(w) {
             return Array.prototype.map.call(w.querySelectorAll(this.what), function(t) {
@@ -197,20 +204,20 @@
             });
          },
          findMatch: function() {
-            if (!this.list.length) return;
             document.querySelectorAll(this.where).forEach(function(w) {
                if (this.opts.pause) return;
                if (this.opts.show) {
 						let reasons = this.findTags(w).filter(this.ifMatch, this).map(function(r) { return r[0]; });
-                  if (this.findChapters(w)) reasons.unshift('#Chapters');
-                  if (this.findRelations(w)) reasons.unshift('#Relationships');
-                  if (this.findFandoms(w)) reasons.unshift('#Fandoms');
-                  if (this.findLangs(w)) reasons.unshift('#Language');
+                  if (this.findRelations(w)) reasons.unshift('Relationships');
+                  if (this.findChapters(w)) reasons.unshift('Chapters');
+                  if (this.findFandoms(w)) reasons.unshift('Fandoms');
+                  if (this.findIncomplete(w)) reasons.unshift('Incomplete');
+                  if (this.findLangs(w)) reasons.unshift('Language');
                   if (!reasons.length) return;
                   w.setAttribute('data-visibility', 'hide');
                   w.setAttribute('data-reasons', reasons.join(', '));
                } else {
-                  if (!this.findTags(w).some(this.ifMatch, this) && !this.findFandoms(w) && !this.findRelations(w) && !this.findChapters(w)) return;
+                  if (!this.findLangs(w) && !this.findIncomplete(w) && !this.findFandoms(w) && !this.findChapters(w) && !this.findRelations(w) && !this.findTags(w).some(this.ifMatch, this)) return;
                   w.setAttribute('data-visibility', 'remove');
                }
             }, this);
@@ -229,7 +236,8 @@
                pause: document.getElementById('fs-blacklist-pause').checked,
                maxFandoms: document.getElementById('fs-blacklist-maxFandoms').value,
                maxRelations: document.getElementById('fs-blacklist-maxRelations').value,
-               maxChapters: document.getElementById('fs-blacklist-maxChapters').value
+               maxChapters: document.getElementById('fs-blacklist-maxChapters').value,
+               minIncomplete: document.getElementById('fs-blacklist-minIncomplete').value
             });
             this.clear();
             this.findMatch();
@@ -245,16 +253,17 @@
          '#fs-black-save {color: #900!important; font-weight: bold; } ' +
          '.fs-black-opts { font-variant: small-caps; display: flex; flex-wrap: wrap; } ' +
          '.fs-black-opts span { width: 50%; } ' +
+         '.fs-black-opts span:nth-child(5) { width: 100%; } ' +
          '.fs-black-opts span, #menu-blacklist .fs-black-info span { flex: auto; } ' +
          '.fs-black-info { font-size: .8em; display: flex; flex-wrap: nowrap; } ' +
          '#menu-blacklist input[type="checkbox"] { margin-top: .1em; } ' +
          '#menu-blacklist input[type="number"], #menu-blacklist input[type="text"] { width: 3em; padding: 0 0 0 .2em; background: #fff; border: 0; box-shadow: 0 0 0 1px #888; border-radius: 0; box-sizing: border-box; } ' +
-         '#menu-blacklist input[type="text"] { width: 6em; } ' +
+         '#menu-blacklist input[type="text"] { width: auto; } ' +
          '#menu-blacklist textarea { font-size: .9em; line-height: 1.2em; min-height: 10em; margin: .5em!important; padding: .3em; box-shadow: 0 0 0 1px #888; width: calc(100% - 1em); border: 0; box-sizing: border-box; resize: vertical; } ' +
          '[data-visibility="remove"], [data-visibility="hide"] > :not(.header), [data-visibility="hide"] > .header > :not(h4) { display: none!important; } ' +
          '[data-visibility="hide"] { opacity: .6; } ' +
          '[data-visibility="hide"] > .header, [data-visibility="hide"] > .header > h4 { margin: 0!important; min-height: auto; font-size: .9em; font-style: italic; }' +
-         '[data-visibility="hide"]::before { content: "Blacklisted | " attr(data-reasons); } '
+         '[data-visibility="hide"]::before { content: "\\2573  " attr(data-reasons); font-size: .8em; } '
       );
       // Blacklist's menu
       var blMenu = document.createElement('li');
@@ -266,7 +275,7 @@
          '<li role="menu-item" style="padding: .5em 0;">' +
          '<div class="fs-black-info"><span title="(comma)">separator: ,</span><span title="*: match zero or more of any character (letter, white space, symbol...) [it can be used multiple times in the same tag]">wildcard: *</span><span title="&&: match two pair of words in any order [it can be used only once in the same tag]">matched pair: &&</span><span title="&!: hide relationships that include only one person of your favourite ship [it can be used only once in the same tag]">only otp: &!</span></div>' +
          '<textarea id="fs-blacklist" spellcheck="false">' + Blacklist.list.join(',') + '</textarea>' +
-         '<div class="fs-black-opts"><span>max fandoms <input id="fs-blacklist-maxFandoms" type="number" min="0" step="1" value="' + Blacklist.opts.maxFandoms + '"></span> <span>max relations <input id="fs-blacklist-maxRelations" type="number" min="0" step="1" value="' + Blacklist.opts.maxRelations + '"></span> <span>max chapters <input id="fs-blacklist-maxChapters" type="number" min="0" step="1" value="' + Blacklist.opts.maxChapters + '"></span> <span>languages <input type="text" id="fs-blacklist-langs" spellcheck="false" placeholder="leave empty for any" title="separate languages by a comma" value="' + Blacklist.langs.join(',') + '"></span></div>' +
+         '<div class="fs-black-opts"><span>max fandoms <input id="fs-blacklist-maxFandoms" type="number" min="0" step="1" value="' + Blacklist.opts.maxFandoms + '"></span> <span>max relations <input id="fs-blacklist-maxRelations" type="number" min="0" step="1" value="' + Blacklist.opts.maxRelations + '"></span> <span>max chapters <input id="fs-blacklist-maxChapters" type="number" min="0" step="1" value="' + Blacklist.opts.maxChapters + '"></span>  <span title="for incompleted works">last updated <input id="fs-blacklist-minIncomplete" type="number" min="0" step="1" title="in months" value="' + Blacklist.opts.minIncomplete + '"></span> <span>languages <input type="text" id="fs-blacklist-langs" spellcheck="false" placeholder="leave empty for any" title="separate languages by a comma" value="' + Blacklist.langs.join(',') + '"></span></div>' +
          '</li></ul>';
       document.querySelector('#header > ul').appendChild(blMenu);
 
@@ -283,40 +292,40 @@
       addCSS(
          'ficstyle-general',
          // fic's style
+         '#main div.wrapper { margin-bottom: 1em; } ' +
          '#workskin { margin: 0; text-align: justify; max-width: none!important; } ' +
          '#workskin .notes, #workskin .summary, blockquote { font-size: inherit; font-family: inherit; } ' +
-         '#main div.wrapper { margin-bottom: 1em; } ' +
+         '.preface a, #chapters a, .preface a:link, #chapters a:link, .preface a:visited, #chapters a:visited, .preface a:visited:hover, #chapters a:visited:hover { color: inherit !important; } ' +
          '.actions { font-family: \'Lucida Grande\', \'Lucida Sans Unicode\', \'GNU Unifont\', Verdana, Helvetica, sans-serif; font-size: 14px; } ' +
-         '.chapter .preface { margin-bottom: 0; border-width: 0; } ' +
-         '.chapter .preface[role="complementary"] { margin-top: 0; padding-top: 0; } ' +
-         '.preface.group, div.preface { color: inherit; background-color: inherit; margin-left: 0; margin-right: 0; margin-top: 0; } ' +
+         '.chapter .preface { border-top: 0; margin-bottom: 0; padding: 0 2em; }' +
+         '.chapter .preface[role="complementary"] { border-width: 0; margin: 0; } ' +
+         '.preface.group, div.preface { color: inherit; background-color: inherit; margin-left: 0; margin-right: 0; padding: 0 2em; } ' +
+         '#workskin #chapters .preface .userstuff p { margin: .1em auto; line-height: 1.1em; } ' +
          'div.preface .byline a, #workskin #chapters a, #chapters a:link, #chapters a:visited { color: inherit; } ' +
          'div.preface .notes, div.preface .summary, div.preface .series, div.preface .children { min-height: 0; } ' +
          'div.preface .jump { margin-top: 1em; font-size: .9em; }' +
-         '.preface blockquote { border: 3px solid rgba(0, 0, 0, .1); border-left: 0; border-right: 0; padding: .6em; margin: 0; }' +
+         '.preface blockquote { box-shadow: 0 0 0 2px rgba(0, 0, 0, .1), 0 0 0 2px rgba(255, 255, 255, .2); padding: .6em; margin: 0; }' +
          '.preface h3.title { background: repeating-linear-gradient(45deg, rgba(0, 0, 0, .05), rgba(0, 0, 0, .1) 2px, rgba(255, 255, 255, .2) 2px, rgba(255, 255, 255, .2) 4px); padding: .6em; margin: 0; } ' +
-         '.preface h3.heading { border-width: 0; } ' +
+         '.preface h3.heading { font-size: inherit; border-width: 0; } ' +
          'h3.title a { border: 0; font-style: italic; } ' +
          'div.preface .associations, .preface .notes h3+p { margin-bottom: 0; font-style: italic; font-size: .8em; } ' +
-         '.chapter .preface[role="complementary"] { border-width: 0; margin: 0; } ' +
          '#workskin #chapters, #workskin #chapters .userstuff { width: 100%!important; box-sizing: border-box; } ' +
          '#workskin #chapters .userstuff p { font-family: inherit; margin: .6em auto; text-align: justify; line-height: 1.5em; } ' +
          '#workskin #chapters .userstuff { font-family: inherit; text-align: justify; line-height: 1.5em } ' +
          '#workskin #chapters .userstuff br { display: block; margin-top: .6em; content: " "; } ' +
-         '.userstuff hr { width: 100%; height: 1px; border: 0; background-image: linear-gradient(90deg, transparent, rgba(0, 0, 0, .3), transparent); margin: 1.5em 0; } ' +
+         '.userstuff hr { width: 100%; height: 1px; border: 0; margin: 1.5em 0; background-image: linear-gradient(90deg, transparent, rgba(0, 0, 0, .2), transparent), linear-gradient(90deg, transparent, rgba(255, 255, 255, .3), transparent); } ' +
          '#workskin #chapters .userstuff blockquote { padding-top: 1px; padding-bottom: 1px; margin: 0 .5em; font-size: inherit; } ' +
          '.userstuff img { max-width: 100%; height: auto; display: block; margin: auto; } ' +
-         '.preface a, #chapters a, .preface a:link, #chapters a:link, .preface a:visited, #chapters a:visited, .preface a:visited:hover, #chapters a:visited:hover { color: inherit !important; } ' +
          // options
          '#options.options-hide > div:nth-last-child(n+2) { display: none; } ' +
-         '#options, .ficleft { position: fixed; bottom: 10px; margin: 0; padding: 0; font-family: Consolas, monospace; font-size: 16px; line-height: 18px; color: #000;     text-shadow: 0 0 1px rgba(0, 0, 0, .4); background-color: rgba(255, 255, 255, .1); border-radius: .3em; z-index: 999; } ' +
+         '#options, .ficleft { position: fixed; bottom: 10px; margin: 0; padding: 0; font-family: Consolas, monospace; font-size: 16px; line-height: 18px; color: #000; text-shadow: 0 0 1px rgba(0, 0, 0, .4); background-color: rgba(255, 255, 255, .1); border-radius: .3em; z-index: 999; } ' +
          '#options { right: 0; } ' +
          '#options > div { margin: .4em 0 0 0; padding: 0 5px; cursor: pointer; } ' +
          '#options > div:last-child { display: block; padding: .3em .2em; color: #fff; background-color: rgba(0, 0, 0, .2); border-radius: 4px 0 0 4px; } ' +
          '#options a { border: 0; color: #000; } ' +
          '.fictop { margin: 1em 0 0; font-size: 80%; text-align: right; padding: 0; } ' +
          // chapter words
-         '.chapterWords { font-size: .8em; color: inherit; font-family: consolas, monospace; text-transform: uppercase; text-align: center; margin: 3em 0 .5em; }'
+         '.chapterWords { font-size: .7em; color: inherit; font-family: consolas, monospace; text-transform: uppercase; text-align: center; margin: 3em 0 .5em; }'
       );
 
       // CSS changes depending on the user
@@ -371,9 +380,9 @@
          },
          changeVar: function(a) {
             // arguments: 0 name, 1 direction/increment, 2 type/limit
-            var pos = getScroll() / getDocHeight();
+            let pos = getScroll() / getDocHeight();
             if (a.length > 1) {
-               var cur = this.get()[a[0]];
+               let cur = this.get()[a[0]];
                if (typeof a[2] === 'string') {
                   let arr = a[2] === 'obj' ? Object.keys(this.def[a[0]]) : this.def[a[0]];
                   let end = a[1] === 1 ? arr.length : -1;
@@ -410,7 +419,6 @@
             }
          });
       }
-
       document.body.appendChild(options);
 
       // remove all the non-breaking white spaces
@@ -512,7 +520,7 @@
 
    // NEW VERSION NOTIFICATION
    if (check.version()) {
-      document.body.insertAdjacentHTML('beforeend', '<div style="position: fixed; bottom: 50px; right: 50px; width: 40%; z-index: 999;font-size: .8em; background: #fff; padding: 1em; border: 1px solid #900;"><b>AO3: Fic\'s Style, Blacklist, Bookmarks</b> UPDATES (v3.4.5)<br><br>Blacklist:<br>- Hide works with too many chapters.<br><br>Bookmarks:<br>- For easier access, when you click on a work in the "Bookmarks" menu, it will open automatically the Full Screen.<br><br><span id="fs-close" style="cursor: pointer; color: #900;">close</span>');
+      document.body.insertAdjacentHTML('beforeend', '<div style="position: fixed; bottom: 50px; right: 50px; width: 40%; z-index: 999;font-size: .8em; background: #fff; padding: 1em; border: 1px solid #900;"><b>AO3: Fic\'s Style, Blacklist, Bookmarks</b> UPDATES (v3.4.6)<br><br>Blacklist:<br>- Hide incompleted works that have been last updated "x" months ago.<br><br><span id="fs-close" style="cursor: pointer; color: #900;">close</span>');
       document.getElementById('fs-close').addEventListener('click', function() { this.parentElement.style.display = 'none'; });
    }
 
