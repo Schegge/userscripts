@@ -3,7 +3,7 @@
 // @author       Schegge
 // @namespace    https://github.com/Schegge
 // @description  Hide videos of blacklisted users/channels (from recommended, search, related channels...)
-// @version      2.4.4
+// @version      2.4.5
 // @match        *://www.youtube.com/*
 // @exclude      *://www.youtube.com/embed/*
 // @exclude      *://www.youtube.com/live_chat?*
@@ -57,11 +57,9 @@
    if (ver === 'new') {
       uClasses = '' +
          // grid
-         '#byline.ytd-grid-video-renderer a, ' +
+         '#text.ytd-channel-name, ' +
          // big channel recommend
-         'a.ytd-shelf-renderer[href*="user"] #title.ytd-shelf-renderer, a.ytd-shelf-renderer[href*="channel"] #title.ytd-shelf-renderer, #title-annotation.ytd-shelf-renderer a, ' +
-         // search
-         '#byline.ytd-video-meta-block, ' +
+         '#title-text.ytd-shelf-renderer a.ytd-shelf-renderer[href*="user"], #title-text.ytd-shelf-renderer a.ytd-shelf-renderer[href*="channel"], #title-annotation.ytd-shelf-renderer a, ' +
          // search channels
          '#channel-title.ytd-channel-renderer span.ytd-channel-renderer, ' +
          // related channels
@@ -69,24 +67,18 @@
          // playlist
          '#byline.ytd-playlist-panel-video-renderer';
       tClasses = 'ytd-video-renderer, ytd-grid-video-renderer, ytd-shelf-renderer, ytd-channel-renderer, ytd-mini-channel-renderer, ytd-playlist-renderer, ytd-compact-video-renderer, ytd-compact-autoplay-renderer, ytd-playlist-panel-video-renderer';
-      uVideo = '#owner-name a';
-
-      /* research -old-
-      window.addEventListener('yt-action', search, false);
-		window.addEventListener('yt-page-data-updated', search, false);
-		window.addEventListener('yt-load-next-continuation', search, false);
-      window.addEventListener('yt-load-reload-continuation', search, false);
-      */
+      uVideo = '#upload-info #channel-name #text.ytd-channel-name';
 
    // old
    } else {
       uClasses = '' +
          '.yt-lockup-byline > a, ' +
+         '.yt-lockup-title > a[href*="user"], .yt-lockup-title > a[href*="channel"], ' +
          'a.branded-page-module-title-link[href*="user"] .branded-page-module-title-text, a.branded-page-module-title-link[href*="channel"] .branded-page-module-title-text, ' +
          'span.shelf-annotation.shelf-title-annotation a, ' +
          'span.stat.attribution > span:not(.byu-add), ' +
          '.branded-page-related-channels-list .yt-uix-tile-link, ' +
-         '.video-uploader-byline';
+         '#watch7-user-header .yt-user-info > a';
       tClasses = 'tr, li';
       uVideo = '.yt-user-info a';
    }
@@ -100,9 +92,9 @@
 
    $('head').append('<style> ' +
       '#byu-is-black { display: none!important; } ' +
-      '.byu-add { font-size: .8em; margin-right: .5em; cursor: pointer; color: #FF0000; font-family: consolas, monospace; vertical-align: top; }' +
+      '.byu-add { font-size: .8em; margin-right: .5em; cursor: pointer; color: #FF0000; font-family: consolas, monospace; float: left; }' +
       '#byu-video-page-black { position: fixed; z-index: 999999; width: 20%; min-width: 200px; font-size: 1.1em; padding: 1em; bottom: 50px; left: 50px; background: red; color: #fff; border-radius: 2px; }' +
-      '#byu { color: #A0A0A0; cursor: pointer; font-size: 22px; vertical-align: middle; } ' +
+      '#byu { color: var(--yt-spec-icon-active-other); cursor: pointer; font-size: 22px; vertical-align: middle; } ' +
       '#byu-options { width: 500px; display: flex; flex-flow: row wrap; align-items: baseline; position: fixed; right: 70px; padding: 0 20px 15px; background-color: #fff; box-shadow: 0 1px 2px 0 rgba(0,0,0,.1); border: 1px solid #fafafa; border-top: 0; z-index: 9999999999; } ' +
       '#byu-options div { box-sizing: border-box; padding: 5px; font-size: 1em; } ' +
       '#byu-options .byu-textarea div { font-size: 1.2em; width: 100%; text-align: center; font-weight: 500; } ' +
@@ -158,11 +150,11 @@
    /* BLACKLIST MENU */
 
    // changes' ver
-   if (byuver !== '2.4.4') {
-      byuver = '2.4.4';
+   if (byuver !== '2.4.5') {
+      byuver = '2.4.5';
       GM.setValue('byuver', byuver);
-      $('body').append('<div style="position: fixed; z-index: 999999; width: 35%; min-width: 200px; font-size: 1em; padding: 1.5em; bottom: 50px; right: 50px; color: red; background: #fff; border-radius: .5em; border: 1px solid red;">BLOCK YOUTUBE USERS [2.4.4]<br><br>The [x] buttons to blacklist channels are automatically shown when the "B" menu is open.<br><br><span id="byu-notice-dismiss" style="cursor: pointer; background: red; color: #fff; border-radius: 2px; padding: 0 5px;">dismiss</span></div>');
-      $('#byu-notice-dismiss').on('click', function() { $('#byu-notice-dismiss').parent().remove(); });
+      /* $('body').append('<div style="position: fixed; z-index: 999999; width: 35%; min-width: 200px; font-size: 1em; padding: 1.5em; bottom: 50px; right: 50px; color: red; background: #fff; border-radius: .5em; border: 1px solid red;">BLOCK YOUTUBE USERS [2.4.5]<br><br><br><br><span id="byu-notice-dismiss" style="cursor: pointer; background: red; color: #fff; border-radius: 2px; padding: 0 5px;">dismiss</span></div>');
+      $('#byu-notice-dismiss').on('click', function() { $('#byu-notice-dismiss').parent().remove(); }); */
    }
 
    // menu
@@ -299,10 +291,8 @@
          add = 'yes';
       } else {
          add = '';
-         $('.byu-add').remove();
       }
       await GM.setValue('enableadd', add);
-      search();
    });
 
    // enable/disable pause video
