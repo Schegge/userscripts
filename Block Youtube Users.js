@@ -3,7 +3,7 @@
 // @author       Schegge
 // @namespace    https://github.com/Schegge
 // @description  Hide videos of blacklisted users/channels (from recommended, search, related channels...)
-// @version      2.4.5
+// @version      2.4.5.1
 // @match        *://www.youtube.com/*
 // @exclude      *://www.youtube.com/embed/*
 // @exclude      *://www.youtube.com/live_chat?*
@@ -47,7 +47,7 @@
    }
    await getValues();
 
-   var byuver = await GM.getValue('byuver', '2.4.4');
+   var byuver = await GM.getValue('byuver', '2.4.5.1');
    var bOpen = false;
    var suspend = false;
    var uClasses, tClasses, uVideo, margintop;
@@ -66,7 +66,7 @@
          '.title.ytd-mini-channel-renderer, ' +
          // playlist
          '#byline.ytd-playlist-panel-video-renderer';
-      tClasses = 'ytd-video-renderer, ytd-grid-video-renderer, ytd-shelf-renderer, ytd-channel-renderer, ytd-mini-channel-renderer, ytd-playlist-renderer, ytd-compact-video-renderer, ytd-compact-autoplay-renderer, ytd-playlist-panel-video-renderer';
+      tClasses = 'ytd-video-renderer, ytd-grid-video-renderer, ytd-rich-item-renderer, ytd-shelf-renderer, ytd-channel-renderer, ytd-mini-channel-renderer, ytd-playlist-renderer, ytd-compact-video-renderer, ytd-compact-autoplay-renderer, ytd-playlist-panel-video-renderer';
       uVideo = '#upload-info #channel-name #text.ytd-channel-name';
 
    // old
@@ -86,7 +86,7 @@
    /* INTERVAL FOR BLACKLISTING */
 
    search();
-   setInterval(search, 1000);
+   setInterval(search, 1500);
 
    /* CSS */
 
@@ -150,10 +150,10 @@
    /* BLACKLIST MENU */
 
    // changes' ver
-   if (byuver !== '2.4.5') {
-      byuver = '2.4.5';
+   if (byuver !== '2.4.5.1') {
+      byuver = '2.4.5.1';
       GM.setValue('byuver', byuver);
-      /* $('body').append('<div style="position: fixed; z-index: 999999; width: 35%; min-width: 200px; font-size: 1em; padding: 1.5em; bottom: 50px; right: 50px; color: red; background: #fff; border-radius: .5em; border: 1px solid red;">BLOCK YOUTUBE USERS [2.4.5]<br><br><br><br><span id="byu-notice-dismiss" style="cursor: pointer; background: red; color: #fff; border-radius: 2px; padding: 0 5px;">dismiss</span></div>');
+      /* $('body').append('<div style="position: fixed; z-index: 999999; width: 35%; min-width: 200px; font-size: 1em; padding: 1.5em; bottom: 50px; right: 50px; color: red; background: #fff; border-radius: .5em; border: 1px solid red;">BLOCK YOUTUBE USERS [2.4.6]<br><br><br><br><span id="byu-notice-dismiss" style="cursor: pointer; background: red; color: #fff; border-radius: 2px; padding: 0 5px;">dismiss</span></div>');
       $('#byu-notice-dismiss').on('click', function() { $('#byu-notice-dismiss').parent().remove(); }); */
    }
 
