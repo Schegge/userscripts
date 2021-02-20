@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         AO3: Fic's Style, Blacklist, Bookmarks
 // @namespace    https://github.com/Schegge
-// @version      3.5
-// @description  Change font, size, width, background... of a work + blacklist/savior: hide works that contain certains tags, have too many fandoms/relations/chapters and other options + fullscreen reading mode + bookmarks: save the position you stopped reading a fic + number of words for each chapter and estimated reading time
+// @version      3.5.1
+// @description  Change font, size, width, background... of a work + blacklist/savior: hide works that contain certains tags, have too many fandoms/relations/chapters/words and other options + fullscreen reading mode + bookmarks: save the position you stopped reading a fic + number of words for each chapter and estimated reading time
 // @author       Schegge
 // @include      http*://archiveofourown.org/*
 // @grant        none
@@ -13,8 +13,8 @@
    var check = {
       // Script version
       version: function() {
-         if (getStorage('ficstyle_version', '1') !== 35) {
-            setStorage('ficstyle_version', 35);
+         if (getStorage('ficstyle_version', '1') !== 351) {
+            setStorage('ficstyle_version', 351);
             return true;
          }
          return false;
@@ -35,13 +35,12 @@
 
    // NEW VERSION NOTIFICATION
    if (check.version()) {
-		localStorage.removeItem('ficstyle');
-      document.body.insertAdjacentHTML('beforeend', '<div style="position: fixed; bottom: 50px; right: 50px; width: 40%; z-index: 999; font-size: .8em; background: #fff; padding: 1em; border: 1px solid #900;"><b>AO3: Fic\'s Style, Blacklist, Bookmarks</b> LAST UPDATE (v3.5)<br><br>Fic\'s style tweaks:<br><br>- I\'ve changed how you can personalize the styling of a fanfiction, because of this your previous saving is lost. Sorry.<br>- You can now also change the <b>line spacing</b> and set your own <b>words per minute</b> reading speed (default value is changed to 250). When you change the wpm, the new estimated reading times will appear after refreshing the page.<br><br><a target="_blanket" href="https://greasyfork.org/en/scripts/10944-ao3-fic-s-style-blacklist-bookmarks">More information.</a><br><br><span id="fs-close" style="cursor: pointer; color: #900;">close</span>');
+      document.body.insertAdjacentHTML('beforeend', '<div style="position: fixed; bottom: 50px; right: 50px; width: 40%; z-index: 999; font-size: .8em; background: #fff; padding: 1em; border: 1px solid #900;"><b>AO3: Fic\'s Style, Blacklist, Bookmarks</b> UPDATES (v3.5.1)<br><br>Blacklist:<br>Added the options to hide a work that is under a min or above a max number of words. The values are in thousands, so if you put "5" it refers to 5k words.<br><br><a target="_blanket" href="https://greasyfork.org/en/scripts/10944-ao3-fic-s-style-blacklist-bookmarks">More info.</a><br><br><span id="fs-close" style="cursor: pointer; color: #900;">close</span>');
       document.getElementById('fs-close').addEventListener('click', function() { this.parentElement.style.display = 'none'; });
    }
 
    // add estimated reading time for every fic found
-   var wpm = getStorage('ficstyle_wpm', '250');
+	var wpm = getStorage('ficstyle_wpm', '250');
    document.querySelectorAll('dl.stats dd.words').forEach(function(s) {
       let numWords = s.textContent.replace(/,/g, '');
       s.insertAdjacentHTML('afterend', '<dt>Time:</dt><dd>' + countTime(numWords) + '</dd>');
@@ -59,7 +58,7 @@
    var Bookmarks = {
       list: [],
       get: function() {
-         this.list = getStorage('ficstyle_bookmarks', []);
+         this.list = getStorage('ficstyle_bookmarks', '[]');
       },
       set: function() {
          setStorage('ficstyle_bookmarks', this.list);
@@ -166,11 +165,11 @@
          '#fs-black-save {color: #900!important; font-weight: bold; } ' +
          '.fs-black-opts { font-variant: small-caps; display: flex; flex-wrap: wrap; } ' +
          '.fs-black-opts span { width: 50%; } ' +
-         '.fs-black-opts span:nth-child(5) { width: 100%; } ' +
+         '.fs-black-opts span:last-of-type:nth-of-type(odd) { width: 100%; } ' +
          '.fs-black-opts span, #menu-blacklist .fs-black-info span { flex: auto; } ' +
          '.fs-black-info { font-size: .8em; display: flex; flex-wrap: nowrap; } ' +
          '#menu-blacklist input[type="checkbox"] { margin-top: .1em; } ' +
-         '#menu-blacklist input[type="number"], #menu-blacklist input[type="text"] { width: 3em; padding: 0 0 0 .2em; background: #fff; border: 0; box-shadow: 0 0 0 1px #888; border-radius: 0; box-sizing: border-box; } ' +
+         '#menu-blacklist input[type="number"], #menu-blacklist input[type="text"] { width: 4em; padding: 0 0 0 .2em; background: #fff; border: 0; box-shadow: 0 0 0 1px #888; border-radius: 0; box-sizing: border-box; } ' +
          '#menu-blacklist input[type="text"] { width: auto; } ' +
          '#menu-blacklist textarea { font-size: .9em; line-height: 1.2em; min-height: 10em; margin: .5em!important; padding: .3em; box-shadow: 0 0 0 1px #888; width: calc(100% - 1em); border: 0; box-sizing: border-box; resize: vertical; } ' +
          '[data-visibility="remove"], [data-visibility="hide"] > :not(.header), [data-visibility="hide"] > .header > :not(h4) { display: none!important; } ' +
@@ -181,21 +180,13 @@
 
       var Blacklist = {
          list: [],
-         langs: [],
-         opts: {
-            show: true,
-            pause: false,
-            maxFandoms: 0,
-            maxRelations: 0,
-            maxChapters: 0,
-            minIncomplete: 0
-         },
+         opts: {},
          where: 'li.blurb.group:not(.collection)',
          what: '.tags .tag, .required-tags span:not(.warnings) span.text, .header .fandoms .tag',
          get: function() {
-            this.list = getStorage('ficstyle_blacklist', []);
-            this.langs = getStorage('ficstyle_blacklist_langs', []);
-            this.opts = getStorage('ficstyle_blacklist_opts', this.opts);
+            this.list = getStorage('ficstyle_blacklist', '[]');
+            this.langs = getStorage('ficstyle_blacklist_langs', '[]');
+            this.opts = getStorage('ficstyle_blacklist_opts', '{"show":true,"pause":false,"maxFandoms":0,"maxRelations":0,"minIncomplete":0,"maxChapters":0,"minWords":0,"maxWords":0}');
          },
          set: function(v) {
             this.list = v.list.trim() ? JSON.parse('["' + v.list.trim().replace(/[\\"]/g, '\\$&').replace(/\n/g, '\\n').split(',').join('","') + '"]') : [];
@@ -206,8 +197,11 @@
             this.opts.pause = v.pause;
             this.opts.maxFandoms = v.maxFandoms ? Math.max(parseInt(v.maxFandoms, 10), 0) : 0;
             this.opts.maxRelations = v.maxRelations ? Math.max(parseInt(v.maxRelations, 10), 0) : 0;
-            this.opts.maxChapters = v.maxChapters ? Math.max(parseInt(v.maxChapters, 10), 0) : 0;
             this.opts.minIncomplete = v.minIncomplete ? Math.max(parseInt(v.minIncomplete, 10), 0) : 0;
+            this.opts.maxChapters = v.maxChapters ? Math.max(parseInt(v.maxChapters, 10), 0) : 0;
+            this.opts.minWords = v.minWords ? Math.max(parseInt(v.minWords, 10), 0) : 0;
+            this.opts.maxWords = v.maxWords ? Math.max(parseInt(v.maxWords, 10), 0) : 0;
+            if (this.opts.maxWords > 0 && this.opts.minWords >= this.opts.maxWords) this.opts.maxWords = 0;
             setStorage('ficstyle_blacklist_opts', this.opts);
          },
          findFandoms: function(w) {
@@ -216,14 +210,21 @@
          findRelations: function(w) {
             return this.opts.maxRelations && w.querySelectorAll('.tags .relationships .tag').length > this.opts.maxRelations;
          },
-         findChapters: function(w) {
-            return this.opts.maxChapters && w.querySelector('dd.chapters') && parseInt(w.querySelector('dd.chapters').textContent.split('/')[0], 10) > this.opts.maxChapters;
-         },
          findIncomplete: function(w) {
             if (!this.opts.minIncomplete || !w.querySelector('dd.chapters') || /(\d+)\/\1/.test(w.querySelector('dd.chapters').textContent)) return false;
             let today = new Date();
             let last = new Date(w.querySelector('.datetime').textContent);
             return Math.abs(last.getTime() - today.getTime()) / (1000 * 3600 * 24 * 30.4) > this.opts.minIncomplete;
+         },
+         findChapters: function(w) {
+            return this.opts.maxChapters && w.querySelector('dd.chapters') && parseInt(w.querySelector('dd.chapters').textContent.split('/')[0], 10) > this.opts.maxChapters;
+         },
+         findWords: function(w) {
+            if ((this.opts.minWords || this.opts.maxWords) && w.querySelector('dd.words')) {
+               let numWords = parseInt(w.querySelector('dd.words').textContent.replace(/,/g, ''), 10) / 1000;
+               if ((this.opts.minWords && numWords <= this.opts.minWords) || (this.opts.maxWords && numWords >= this.opts.maxWords)) return true;
+            }
+            return false;
          },
          findLangs: function(w) {
             return this.langs.length && w.querySelector('dd.language') && this.langs.join(' ').toLowerCase().indexOf(w.querySelector('dd.language').textContent.toLowerCase().trim()) === -1;
@@ -250,6 +251,7 @@
 						let reasons = this.findTags(w).filter(this.ifMatch, this).map(function(r) { return r[0]; });
                   if (this.findRelations(w)) reasons.unshift('[Relationships]');
                   if (this.findChapters(w)) reasons.unshift('[Chapters]');
+                  if (this.findWords(w)) reasons.unshift('[Words]');
                   if (this.findFandoms(w)) reasons.unshift('[Fandoms]');
                   if (this.findIncomplete(w)) reasons.unshift('[Incomplete]');
                   if (this.findLangs(w)) reasons.unshift('[Language]');
@@ -257,7 +259,7 @@
                   w.setAttribute('data-visibility', 'hide');
                   w.setAttribute('data-reasons', reasons.join(' - '));
                } else {
-                  if (!this.findLangs(w) && !this.findIncomplete(w) && !this.findFandoms(w) && !this.findChapters(w) && !this.findRelations(w) && !this.findTags(w).some(this.ifMatch, this)) return;
+                  if (!this.findLangs(w) && !this.findIncomplete(w) && !this.findFandoms(w) && !this.findChapters(w) && !this.findWords(w) && !this.findRelations(w) && !this.findTags(w).some(this.ifMatch, this)) return;
                   w.setAttribute('data-visibility', 'remove');
                }
             }, this);
@@ -276,8 +278,10 @@
                pause: document.getElementById('fs-blacklist-pause').checked,
                maxFandoms: document.getElementById('fs-blacklist-maxFandoms').value,
                maxRelations: document.getElementById('fs-blacklist-maxRelations').value,
+               minIncomplete: document.getElementById('fs-blacklist-minIncomplete').value,
                maxChapters: document.getElementById('fs-blacklist-maxChapters').value,
-               minIncomplete: document.getElementById('fs-blacklist-minIncomplete').value
+               minWords: document.getElementById('fs-blacklist-minWords').value,
+               maxWords: document.getElementById('fs-blacklist-maxWords').value
             });
             this.clear();
             this.findMatch();
@@ -292,7 +296,7 @@
 					'<li role="menu-item" style="padding: .5em 0;">' +
 					'<div class="fs-black-info"><span title="(comma)">separator: ,</span><span title="*: match zero or more of any character (letter, white space, symbol...) [it can be used multiple times in the same tag]">wildcard: *</span><span title="&&: match two pair of words in any order [it can be used only once in the same tag]">matched pair: &&</span><span title="&!: hide relationships that include only one person of your favourite ship [it can be used only once in the same tag]">only otp: &!</span></div>' +
 					'<textarea id="fs-blacklist" spellcheck="false">' + this.list.join(',') + '</textarea>' +
-					'<div class="fs-black-opts"><span>max fandoms <input id="fs-blacklist-maxFandoms" type="number" min="0" step="1" value="' + this.opts.maxFandoms + '"></span> <span>max relations <input id="fs-blacklist-maxRelations" type="number" min="0" step="1" value="' + this.opts.maxRelations + '"></span> <span>max chapters <input id="fs-blacklist-maxChapters" type="number" min="0" step="1" value="' + this.opts.maxChapters + '"></span>  <span title="for incompleted works">last updated <input id="fs-blacklist-minIncomplete" type="number" min="0" step="1" title="in months" value="' + this.opts.minIncomplete + '"></span> <span>languages <input type="text" id="fs-blacklist-langs" spellcheck="false" placeholder="leave empty for any" title="separate languages by a comma" value="' + this.langs.join(',') + '"></span></div>' +
+					'<div class="fs-black-opts"><span>max fandoms <input id="fs-blacklist-maxFandoms" type="number" min="0" step="1" value="' + this.opts.maxFandoms + '"></span> <span>max relations <input id="fs-blacklist-maxRelations" type="number" min="0" step="1" value="' + this.opts.maxRelations + '"></span> <span>max chapters <input id="fs-blacklist-maxChapters" type="number" min="0" step="1" value="' + this.opts.maxChapters + '"></span> <span title="for incompleted works">last updated <input id="fs-blacklist-minIncomplete" type="number" min="0" step="1" title="in months" value="' + this.opts.minIncomplete + '"></span> <span>min words <input id="fs-blacklist-minWords" type="number" min="0" step="1" title="in thousands" value="' + this.opts.minWords + '"></span> <span>max words <input id="fs-blacklist-maxWords" type="number" min="0" step="1" title="in thousands" value="' + this.opts.maxWords + '"></span> <span>languages <input type="text" id="fs-blacklist-langs" spellcheck="false" placeholder="leave empty for any" title="separate languages by a comma" value="' + this.langs.join(',') + '"></span></div>' +
 					'</li></ul>';
 				document.querySelector('#header > ul').appendChild(blMenu);
 
@@ -358,21 +362,14 @@
 
       // CSS changes depending on the user
       var Styling = {
-			def: {
-            fontName: 'inherit',
-            colors: 'light',
-            fontSize: 100,
-            margins: 7,
-            lineSpacing: 5,
-            wpm: 250
-         },
+			def: '{"fontName":"inherit","colors":"light","fontSize":"100","margins":"7","lineSpacing":"5","wpm":"250"}',
 			options: [
 				['fontName', 'Font', 'inherit', 'Arial Black', 'Consolas', 'Courier', 'Garamond', 'Georgia', 'Helvetica', 'Segoe UI', 'Times New Roman', 'Verdana'],
 				['colors', 'Background', 'light', 'grey', 'sepia', 'dark', 'darkblue', 'black'],
-				['fontSize', 'Text Size', 50, 300],
-				['margins', 'Page Margins', 5, 40],
-				['lineSpacing', 'Line Spacing', 3, 15],
-				['wpm', 'Words per Minute', 100, 500]
+				['fontSize', 'Text Size', 100, 50, 300],
+				['margins', 'Page Margins', 7, 5, 40],
+				['lineSpacing', 'Line Spacing', 5, 3, 10],
+				['wpm', 'Words per Minute', 250, 100, 500]
 			],
 			colors: {
 				// background, font color
@@ -388,22 +385,20 @@
          },
 			setDefs: function() {
             setStorage('ficstyle', this.def);
-            setStorage('ficstyle_wpm', this.def.wpm);
+            setStorage('ficstyle_wpm', '250');
 			},
          set: function(a) {
             let all = a || this.get();
-            all.wpm = !all.wpm || all.wpm < this.options[5][2] ? this.options[5][2] : all.wpm;
             setStorage('ficstyle', all);
             setStorage('ficstyle_wpm', all.wpm);
             addCSS(
                'ficstyle-user-changes',
-               '#workskin { font-family: ' + all.fontName + '; font-size: ' + all.fontSize + '%; padding: 0 ' + all.margins + '%; color: ' + this.colors[all.colors][1] + '; background-color: ' + this.colors[all.colors][0] + '; } ' +
-					'#workskin #chapters .userstuff p { line-height: ' + all.lineSpacing * 0.3 + 'em; margin: ' + (all.lineSpacing * 0.5 - 1.4) + 'em auto; } #workskin #chapters .userstuff { line-height: ' + all.lineSpacing * 0.3 + 'em } '
+               '#workskin { font-family: ' + all.fontName +'; font-size: ' + all.fontSize + '%; padding: 0 ' + all.margins + '%;' + '; color: ' + this.colors[all.colors][1] + '; background-color: ' + this.colors[all.colors][0] + '; } ' +
+					'#workskin #chapters .userstuff p { line-height: ' + ( all.lineSpacing * 0.3 ) + 'em; margin: ' + (all.lineSpacing * 0.5 - 1.4) + 'em auto; } #workskin #chapters .userstuff { line-height: ' + ( all.lineSpacing * 0.3 ) + 'em } '
             );
          },
 			html: function() {
-            let all = this.get();
-            let pos = 0;
+            var all = this.get();
 
 				// the options displayed on the page
 				let elsC = document.createElement('div');
@@ -414,8 +409,7 @@
 				elsC.appendChild(els);
 
 				for (let i = 0; i < this.options.length; i++) {
-               let el = document.createElement('label');
-               // i =  0:key  1:text  2:min  3:max
+					let el = document.createElement('label');
 					let h = this.options[i][1];
 					if (typeof this.options[i][2] === 'string') {
 						h += '<select id="' + this.options[i][0] + '">';
@@ -424,9 +418,9 @@
 						}
 						h += '</select>';
 					} else if (this.options[i][0] === 'wpm') {
-						h += '<input type="number" min="' + this.options[i][2] + '" max="' + this.options[i][3] + '" id="' + this.options[i][0] + '" value="' + all[this.options[i][0]] + '">';
+						h += '<input type="number" min="' + this.options[i][3] + '" max="' + this.options[i][4] + '" id="' + this.options[i][0] + '" value="' + all[this.options[i][0]] + '">'
 					} else {
-						h += '<input type="range" min="' + this.options[i][2] + '" max="' + this.options[i][3] + '" id="' + this.options[i][0] + '" value="' + all[this.options[i][0]] + '">';
+						h += '<input type="range" min="' + this.options[i][3] + '" max="' + this.options[i][4] + '" id="' + this.options[i][0] + '" value="' + all[this.options[i][0]] + '">'
 					}
 					el.innerHTML = h;
 					els.appendChild(el);
@@ -438,11 +432,10 @@
 				save.innerHTML = 'save';
 				save.addEventListener('click', function() {
 					for (let i = 0; i < self.options.length; i++) {
-                  let q = els.querySelector('#' + self.options[i][0]);
-						all[self.options[i][0]] = q.tagName === 'SELECT' ? q.value : parseInt(q.value, 10);
+						let q = els.querySelector('#' + self.options[i][0]);
+						all[self.options[i][0]] = q == 'SELECT' ? q.options[e.selectedIndex].text : q.value;
 					}
-               self.set(all);
-               setScroll(pos * getDocHeight());
+					self.set(all);
 				});
 				els.appendChild(save);
 
@@ -452,8 +445,7 @@
 					self.setDefs();
 					self.set();
 					this.parentElement.parentElement.parentElement.removeChild(this.parentElement.parentElement);
-               self.html();
-               setScroll(pos * getDocHeight());
+					self.html();
 				});
 				els.appendChild(reset);
 
@@ -462,7 +454,6 @@
 				elsM.innerHTML = '&#9776;';
 				elsM.addEventListener('click', function() {
 					if (this.parentElement.className === 'options-hide') {
-                  pos = getScroll() / getDocHeight();
 						this.parentElement.className = '';
 						this.innerHTML = 'close';
 					} else {
@@ -562,7 +553,7 @@
          ficLeft.appendChild(deleteBook);
          document.body.appendChild(ficLeft);
 
-         document.querySelector('#feedback .actions a[href="#main"]').href = '#workskin';
+			(document.querySelector('#feedback .actions a[href="#main"]')).href = '#workskin';
          workskin.appendChild(document.querySelector('#feedback .actions'));
       };
       if (Bookmarks.fromBook) fullScreen();
@@ -570,7 +561,7 @@
    }
 
 
-   /* GLOBAL FUNCTIONS */
+   /** GLOBAL FUNCTIONS **/
    function addCSS(id, css) {
       if (!document.querySelector('style#' + id)) {
          let style = document.createElement('style');
@@ -584,12 +575,13 @@
 
    function countTime(num) {
       // estimate reading time
+      if (!num) return '?';
       let time = (parseInt(num, 10) / wpm / 60).toFixed(2).toString().split('.');
       return (time[0] !== '0' ? time[0] + 'hr ' : '') + (time[1] !== '00' ? Math.round(parseInt(time[1], 10) / 100 * 60) + 'min' : '') || '<1min';
    }
 
    function getScroll() {
-      return Math.max(document.documentElement.scrollTop, window.scrollY, 0);
+      return Math.max(document.documentElement.scrollTop, window.scrollY);
    }
    function setScroll(s) {
       window.scroll(0, s ? s : 0);
@@ -598,15 +590,11 @@
       return Math.max(document.documentElement.scrollHeight, document.documentElement.offsetHeight, document.body.scrollHeight, document.body.offsetHeight);
    }
 
+   function getStorage(key, def) {
+      return JSON.parse(localStorage.getItem(key) || def);
+   }
    function setStorage(key, value) {
       localStorage.setItem(key, typeof value !== 'string' ? JSON.stringify(value) : value);
    }
-   function getStorage(key, def) {
-      if (localStorage.getItem(key)) {
-         return JSON.parse(localStorage.getItem(key));
-      } else {
-         setStorage(key, def);
-         return def;
-      }
-   }
+   
 })();
