@@ -3,10 +3,10 @@
 // @author       Schegge
 // @namespace    https://github.com/Schegge
 // @description  Hide videos of blacklisted users/channels (from recommended, search, related channels...)
-// @version      2.4.5.1
-// @match        *://www.youtube.com/*
-// @exclude      *://www.youtube.com/embed/*
-// @exclude      *://www.youtube.com/live_chat?*
+// @version      2.4.6
+// @match        *://*.youtube.com/*
+// @exclude      *://*.youtube.com/embed/*
+// @exclude      *://*.youtube.com/live_chat?*
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        GM.getValue
@@ -17,14 +17,13 @@
 // ==/UserScript==
 
 /** DESCRIPTION
-- for both the new and the old youtube layout
 - it is not case-sensitive
-- it hides videos of blacklisted users/channels from recommended, search, related channels...
+- it hides videos of blacklisted users/channels from recommended, search, related channels, comments...
  - also from the playlists/mixes, but it doesn't prevent them from playing if the playlist is in autoplay
 - put a * in front of a word for wildcard (only in the blacklist), it will find the word no matter its position in the username (example: *vevo, *buzzfeed)
  - when you use it, but still you want continue seeing a channel that has that word in the name, you can put it in the whitelist (example -> balcklist: *buzzfeed; whitelist: BuzzFeed Nifty)
 - you can choose the symbol to split the usernames (default is a comma, * and " not allowed, min-max 1 character)
-- you can enable/disable to blacklist channels by clicking (old yt layout)/right clicking (new yt layout) on '[x]' before the usernames
+- you can enable/disable to blacklist channels by right clicking on '[x]' before the usernames
  - in any case, the [x] buttons are automatically shown when the "B" menu is open
 - from a direct link to youtube, it pauses the video if blacklisted (you can enable/disable it)
 - you can suspend temporarily the block (to reactivate it just click on save or refresh the page)
@@ -47,70 +46,65 @@
    }
    await getValues();
 
-   var byuver = await GM.getValue('byuver', '2.4.5.1');
+   var byuver = await GM.getValue('byuver', '2.4.6');
    var bOpen = false;
    var suspend = false;
-   var uClasses, tClasses, uVideo, margintop;
 
-   // check what layout
-   var ver = $('#yt-masthead-container').length ? 'old' : 'new';
-   if (ver === 'new') {
-      uClasses = '' +
-         // grid
-         '#text.ytd-channel-name, ' +
-         // big channel recommend
-         '#title-text.ytd-shelf-renderer a.ytd-shelf-renderer[href*="user"], #title-text.ytd-shelf-renderer a.ytd-shelf-renderer[href*="channel"], #title-annotation.ytd-shelf-renderer a, ' +
-         // search channels
-         '#channel-title.ytd-channel-renderer span.ytd-channel-renderer, ' +
-         // related channels
-         '.title.ytd-mini-channel-renderer, ' +
-         // playlist
-         '#byline.ytd-playlist-panel-video-renderer';
-      tClasses = 'ytd-video-renderer, ytd-grid-video-renderer, ytd-rich-item-renderer, ytd-shelf-renderer, ytd-channel-renderer, ytd-mini-channel-renderer, ytd-playlist-renderer, ytd-compact-video-renderer, ytd-compact-autoplay-renderer, ytd-playlist-panel-video-renderer';
-      uVideo = '#upload-info #channel-name #text.ytd-channel-name';
-
-   // old
-   } else {
-      uClasses = '' +
-         '.yt-lockup-byline > a, ' +
-         '.yt-lockup-title > a[href*="user"], .yt-lockup-title > a[href*="channel"], ' +
-         'a.branded-page-module-title-link[href*="user"] .branded-page-module-title-text, a.branded-page-module-title-link[href*="channel"] .branded-page-module-title-text, ' +
-         'span.shelf-annotation.shelf-title-annotation a, ' +
-         'span.stat.attribution > span:not(.byu-add), ' +
-         '.branded-page-related-channels-list .yt-uix-tile-link, ' +
-         '#watch7-user-header .yt-user-info > a';
-      tClasses = 'tr, li';
-      uVideo = '.yt-user-info a';
-   }
+   var uClasses = '' +
+      // grid
+      '#text.ytd-channel-name, ' +
+      // big channel recommend
+      '#title-text.ytd-shelf-renderer a.ytd-shelf-renderer[href*="user"], #title-text.ytd-shelf-renderer a.ytd-shelf-renderer[href*="channel"], #title-annotation.ytd-shelf-renderer a, ' +
+      // search channels
+      '#channel-title.ytd-channel-renderer span.ytd-channel-renderer, ' +
+      // related channels
+      '.title.ytd-mini-channel-renderer, ' +
+      // playlist
+      '#byline.ytd-playlist-panel-video-renderer, ' +
+      // comment
+      '#author-text span.ytd-comment-renderer';
+   var tClasses = 'ytd-video-renderer, ytd-grid-video-renderer, ytd-rich-item-renderer, ytd-shelf-renderer, ytd-channel-renderer, ytd-mini-channel-renderer, ytd-playlist-renderer, ytd-compact-video-renderer, ytd-compact-autoplay-renderer, ytd-playlist-panel-video-renderer, ytd-comment-thread-renderer, ytd-movie-renderer, ytd-secondary-search-container-renderer';
+   var uVideo = '#upload-info #channel-name #text.ytd-channel-name';
 
    /* INTERVAL FOR BLACKLISTING */
 
    search();
-   setInterval(search, 1500);
+   setInterval(search, 1000);
 
    /* CSS */
 
    $('head').append('<style> ' +
       '#byu-is-black { display: none!important; } ' +
       '.byu-add { font-size: .8em; margin-right: .5em; cursor: pointer; color: #FF0000; font-family: consolas, monospace; float: left; }' +
-      '#byu-video-page-black { position: fixed; z-index: 999999; width: 20%; min-width: 200px; font-size: 1.1em; padding: 1em; bottom: 50px; left: 50px; background: red; color: #fff; border-radius: 2px; }' +
-      '#byu { color: var(--yt-spec-icon-active-other); cursor: pointer; font-size: 22px; vertical-align: middle; } ' +
-      '#byu-options { width: 500px; display: flex; flex-flow: row wrap; align-items: baseline; position: fixed; right: 70px; padding: 0 20px 15px; background-color: #fff; box-shadow: 0 1px 2px 0 rgba(0,0,0,.1); border: 1px solid #fafafa; border-top: 0; z-index: 9999999999; } ' +
+      '#byu-video-page-black { position: fixed; z-index: 999999; width: 20%; min-width: 50px; font-size: 1.1em; padding: 1em; bottom: 50px; left: 50px; background: red; color: #fff; border-radius: 2px; }' +
+      '#byu { color: var(--yt-spec-icon-active-other); cursor: pointer; font-size: 20px; font-weight: 500; vertical-align: middle; } ' +
+      '#byu-options { width: 30%; max-width: 250px; display: flex; flex-flow: row wrap; align-items: baseline; position: fixed; right: 10px; padding: 0 20px 15px; background-color: #fff; box-shadow: 0 1px 2px 0 rgba(0,0,0,.1); border: 1px solid #fafafa; border-top: 0; z-index: 9999999999; } ' +
       '#byu-options div { box-sizing: border-box; padding: 5px; font-size: 1em; } ' +
+      '#byu-options .byu-textarea { width: 100%; } ' +
       '#byu-options .byu-textarea div { font-size: 1.2em; width: 100%; text-align: center; font-weight: 500; } ' +
-      '#byu-options .byu-textarea textarea { font-size: 1em; line-height: 1em; min-height: 6em; resize: vertical; width: 100%; padding: 4px; border: 2px solid rgba(0,0,0,.13); box-sizing: border-box; } ' +
-      '#byu-options .byu-textarea.wl { width: 35%; } ' +
-      '#byu-options .byu-textarea.bl { width: 65%; } ' +
+      '#byu-options .byu-textarea textarea { font-size: 1em; line-height: 1em; resize: vertical; width: 100%; padding: 4px; border: 2px solid rgba(0,0,0,.13); box-sizing: border-box; } ' +
+      '#byu-options .byu-textarea.bl textarea { min-height: 6em;} ' +
+      '#byu-options .byu-textarea.wl textarea { min-height: 4em;} ' +
       '.byu-ver { width: 50%; font-size: .8em; color: rgba(0,0,0,.4); }' +
       '.byu-save { width: 50%; text-align: right; }' +
       '#byu-saveblacklist { font-size: 1.2em; font-weight: bold; cursor: pointer; color: #FF0000; } ' +
       '.byu-sep { width: auto; flex-grow: 1; color: rgba(0,0,0,.5); } ' +
       '.byu-opt { width: auto; flex-grow: 1;  color: rgba(0,0,0,.5); text-align: center; } ' +
-      '#byu-suspend { width: auto; flex-grow: 1;  cursor: pointer; color: rgba(0,0,0,.5); text-align: right; } ' +
+      '#byu-suspend { width: 100%; flex-grow: 1;  cursor: pointer; color: rgba(0,0,0,.5); text-align: right; } ' +
       '#byu-sep-symbol { width: 1em; background: #fff; border: 1px solid rgba(0,0,0,.2); padding: 0 2px; color: #000; height: 1.3em; line-height: 1em; vertical-align: bottom; box-sizing: border-box; } ' +
       'input[type="checkbox"] { margin: 0; vertical-align: bottom; } ' +
-      (ver === 'old' ? '#byu-options { font-size: 10px; } #byu { color: #808080; } ' : '') +
+      '#byu-notice { position: fixed; z-index: 999999; width: 25%; min-width: 200px; font-size: 1.1em; padding: 1.5em; bottom: 50px; right: 50px; color: red; background: #fff; border-radius: .5em; border: 1px solid red; } ' +
+      '#byu-notice-dismiss { cursor: pointer; background: red; color: #fff; border-radius: 2px; padding: 0 5px; } ' +
       '</style>');
+
+   /* NEW VERSION NOTIFICATION */
+
+   if (byuver !== '2.4.6') {
+      byuver = '2.4.6';
+      GM.setValue('byuver', byuver);
+      $('body').append('<div id="byu-notice">BLOCK YOUTUBE USERS [' + byuver + ']<br><br>- Now it also hide comments of blacklisted users.<br>- The old youtube layout is no longer supported.<br><br><span id="byu-notice-dismiss">close</span></div>');
+      $('#byu-notice-dismiss').on('click', function() { $('#byu-notice').remove(); });
+   }
 
    /* VIDEO FIRST PAGE */
 
@@ -149,45 +143,28 @@
 
    /* BLACKLIST MENU */
 
-   // changes' ver
-   if (byuver !== '2.4.5.1') {
-      byuver = '2.4.5.1';
-      GM.setValue('byuver', byuver);
-      /* $('body').append('<div style="position: fixed; z-index: 999999; width: 35%; min-width: 200px; font-size: 1em; padding: 1.5em; bottom: 50px; right: 50px; color: red; background: #fff; border-radius: .5em; border: 1px solid red;">BLOCK YOUTUBE USERS [2.4.6]<br><br><br><br><span id="byu-notice-dismiss" style="cursor: pointer; background: red; color: #fff; border-radius: 2px; padding: 0 5px;">dismiss</span></div>');
-      $('#byu-notice-dismiss').on('click', function() { $('#byu-notice-dismiss').parent().remove(); }); */
-   }
-
    // menu
    $('body').append('<div id="byu-options" style="display: none">' +
       '<div class="byu-ver">v' + byuver + '</div>' +
       '<div class="byu-save"><span id="byu-saveblacklist">save</span></div>' +
-      '<div class="byu-textarea wl"><div>Whitelist</div><textarea spellcheck="false" id="byu-whitelist-words">' + whitelist.join(sep + ' ') + '</textarea></div>' +
       '<div class="byu-textarea bl"><div>Blacklist</div><textarea spellcheck="false" id="byu-blacklist-words">' + blacklist.join(sep + ' ') + '</textarea></div>' +
+      '<div class="byu-textarea wl"><div>Whitelist</div><textarea spellcheck="false" id="byu-whitelist-words">' + whitelist.join(sep + ' ') + '</textarea></div>' +
       '<div class="byu-sep">separator <input id="byu-sep-symbol" type="text" value="' + sep + '" maxlength="1" /></div>' +
       '<div class="byu-opt">right-click to add <input type="checkbox" name="clickadd" value="clickadd"' + (add ? ' checked' : '') + '></div>' +
       '<div class="byu-opt">pause blacklisted video <input type="checkbox" name="pausevideo" value="pausevideo"' + (pv ? ' checked' : '') + '></div>' +
       '<div id="byu-suspend">suspend</div>' +
       '</div>');
 
-   // for the button with the new layout, wait till the masthead is added
+   // for the button wait till the masthead is added
    var waitButton = setInterval(function() {
-      if (ver === 'old' || $('#buttons').length) {
+      console.log($('#header-bar'), $('#header-bar').length);
+      if ($('#buttons').length) {
          clearInterval(waitButton);
-         button();
+         var btn = '<div style="display: inline-block; position: relative; height: 25px; width: 30px"><span id="byu">B</span></div>';
+         $('#buttons').before(btn);
+         $('head').append('<style>#byu-options {top:' + $('#container.ytd-masthead').height() + 'px; }</style>');
       }
    }, 1000);
-
-   function button() {
-      var btn = '<div style="display: inline-block; position: relative; height: 28px; width: 30px"><span id="byu">B</span></div>';
-      if (ver === 'new') {
-         $('#buttons').before(btn);
-         margintop = $('#container.ytd-masthead').height();
-      } else {
-         $('#yt-masthead-creation-menu').before(btn);
-         margintop = $('#yt-masthead-container').height() + parseInt($('#yt-masthead-container').css('padding-top'), 10) + parseInt($('#yt-masthead-container').css('padding-bottom'), 10);
-      }
-      $('head').append('<style>#byu-options {top:' + margintop + 'px; }</style>');
-   }
 
    /* BLACKLISTING FUNCTIONS */
 
@@ -245,7 +222,7 @@
    // open and close options
    $('body').on('click', '#byu', function() {
       $('#byu-options').slideToggle();
-      $(this).css('font-weight', $(this).css('font-weight') === '700' ? '400' : '700');
+      $(this).css('font-weight', $(this).css('font-weight') === '700' ? '500' : '700');
       bOpen = bOpen ? false : true;
       if (!add) {
          if (bOpen) search();
@@ -276,7 +253,7 @@
    });
 
    // add usernames to blacklist
-   $('body').on('click contextmenu', '.byu-add', async function(e) {
+   $('body').on('contextmenu', '.byu-add', async function(e) {
       e.preventDefault();
       e.stopPropagation();
       $('#byu-blacklist-words').val($('#byu-blacklist-words').val() + (blacklist.length ? sep + ' ' : '') + $(this).next().data('username'));
