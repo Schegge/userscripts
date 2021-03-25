@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         EFP: Controllo Automatico Storie Seguite
-// @namespace    https://github.com/Schegge
-// @version      1.1.1
+// @namespace    http://schegge.github.io/
+// @version      1.2
 // @description  Controllo automatico e segnalazione di nuovi capitoli aggiunti alle storie seguite
 // @author       Schegge
 // @include      http*://*efpfanfic.net/
@@ -9,103 +9,68 @@
 // @grant        none
 // ==/UserScript==
 
+(async function() {
+   const current = [];
+   const followPage = window.location.pathname === '/followed.php';
+   let alert = '';
 
-(function($) {
-   function debugging(msg, variable) {
-       var messaggio = 'CASS:\t' + msg;
-       if (variable || variable === false) {
-           messaggio += ' (' + typeof variable + ') ';
-           console.log(messaggio, variable);
-           return;
-       }
-       console.log(messaggio);
-   }
-   debugging('inizio');
-
-   // controllare se siamo sulla pagina delle storie seguite (followed) oppure no
-   var followPage = window.location.pathname === '/followed.php';
-   debugging('followPage', followPage);
-
-   // se non siamo in followed recuperare le informazioni tramite load(), altrimenti non ce n'è bisogno
    if (!followPage) {
-      // dove i dati verranno salvati
-      $('body').append('<div id="data-followed" style="display: none;"></div>');
-      $('#data-followed').load('/followed.php #corpo', function() {
-         debugging('load /followed.php');
-         checkNewChapters('#data-followed');
-      });
+      // recuperare la pagina se non siamo in followed
+      const res = await fetch('./followed.php');
+      const text = await res.text();
+      const doc = new DOMParser().parseFromString(text, "text/html");
+
+      checkNewChapters(doc);
+
+      if (alert) {
+         document.querySelector('head').insertAdjacentHTML('beforeend', `<style>
+            #cuore { color: #009999; font-family: Segoe UI, sans-serif; }
+            #alert { display: none; position: absolute; color: #009999; background-color: #fff; padding: .4em; font-size: .9em; line-height: 1.2em; text-align: left; box-shadow: 0 0 2px 0 #009999; border-radius: .5em; margin-top: .4em; box-sizing: border-box; width: ${parseInt(document.getElementById('account').offsetWidth, 10)}px;}
+            #cuore:hover + #alert { display: block!important; }
+         </style>`);
+         document.getElementById('secondmenu').insertAdjacentHTML('afterbegin', `<a id="cuore" href="followed.php">&#9825;</a><div id="alert">${alert}</div>`);
+      }
    } else {
-      checkNewChapters('#wrap');
+      checkNewChapters(document);
+
+      document.querySelector('#corpo > div:first-child > div:nth-child(3)').insertAdjacentHTML('beforebegin', `<div style="margin: 0 10px 10px 15p; padding: 10px; color: #009999;">${alert ? alert : 'Nessun nuovo capitolo.'}<br><span id="salva" style="color: #fff; background-color: #009999; cursor: pointer; padding: 0 .5em; border-radius: .5em;">salva</span></div>`);
+      document.getElementById('salva').addEventListener('click', function() {
+         localStorage.setItem('followed', JSON.stringify(current));
+         this.textContent = 'salvato';
+      });
    }
 
    function checkNewChapters(element) {
-      // nuovo controllo
-      var save = {};
       // l'elenco delle storie seguite
-      $(element + ' #corpo > div:nth-child(1) > div:nth-child(3) > div').each(function() {
-         // titolo e capitolo si trovano in un <div> che non ha id
-         if (!$(this).attr('id')) {
+      element.querySelectorAll('#corpo > div:first-child > div:nth-child(3) > div').forEach((el) => {
+         // la storia si trovano in un <div> che non ha id
+         if (!el.getAttribute('id')) {
             // il titolo si trova nell'unico <strong> presente
-            var title = $(this).children('strong').text().trim();
+            let title = el.querySelector('strong > a').textContent.trim();
             // il capitolo in un <a>
-            var chapter = $(this).children('a').text();
-            // che combacia con (numeri).(spazio)(lettere)
-            var found = chapter.match(/(\d+)\.\s\w+/);
-            // found[1] combacia con il raggruppamento (\d+) ossia il numero del capitolo
-            save[title] = parseInt(found[1], 10);
+            let chapter = el.querySelector('a[href*="viewstory.php"]').textContent;
+            // combacia con (numeri).(spazio)(qualunque)
+            chapter = chapter.replace(/(\d+)\.\s.*/, '$1');
+            // nuovo dato
+            current.push([title, parseInt(chapter, 10)]);
          }
       });
-      debugging('save', save);
 
-      // servirà per indicare a quali storie sono stati aggiunti capitoli
-      var alert = '';
-      // recuperare l'ultimo salvataggio
-      var past = JSON.parse(localStorage.getItem('followed'));
-      debugging('past', past);
-
-      // se esiste controllare se ci sono modifiche, altrimenti fare il primo salvataggio
-      if (past) {
-         // per ogni elemento appena recuperato controllare con i dati salvati se ci sono state modifiche
-         for (var key in save) {
-            if (save.hasOwnProperty(key) && past.hasOwnProperty(key)) {
-               if (save[key] !== past[key]) {
-                  // calcolare la differenza di capitoli
-                  var diff = save[key] - past[key];
-                  var testo = diff > 1 ? ' nuovi capitoli' : ' nuovo capitolo';
-                  // aggiungerlo ad alert
-                  alert += '<b>' + key + '</b> ha ' + diff + testo + '.<br>';
-                  debugging(key + ' ha ' + diff + testo);
-               } else {
-                  debugging(key + ' non ha nuovi capitoli');
-               }
+      // controllare con i dati salvati se ci sono state modifiche
+      const saved = JSON.parse(localStorage.getItem('followed') || '[]');
+      current.forEach(s => {
+         let diff = 0;
+         saved.some(p => {
+            if (p[0] === s[0]) {
+               diff = s[1] - p[1];
+               return true;
             }
-         }
-         // se siamo in followed salvare i nuovi cambiamenti
-         if (followPage) {
-            localStorage.setItem('followed', JSON.stringify(save));
-            debugging('salvati i nuovi cambiamenti');
-         }
-      } else {
-         localStorage.setItem('followed', JSON.stringify(save));
-         debugging('primo salvataggio');
-      }
-
-      // segnale per verificare se ci sono state modifiche oppure no, se ce sono state alert non è vuoto
-      var segnale = alert.length ? true : false;
-      if (!alert.length) alert += 'Nessun nuovo capitolo.';
-      debugging('segnale', segnale);
-      debugging('alert', alert);
-
-      // aggiungere la indicazione delle modifiche salvate in alert, e in homepage anche il cuoricino se ci sono state
-      if (followPage) {
-         $('#corpo > div:nth-child(1) > div:nth-child(3)').before('<div style="margin: 0px 10px 10px 15px; padding: 0 10px 10px 10px; color: #009999;">' + alert + '</div>');
-      } else if (segnale) {
-         var menuWidth = parseInt($('#secondmenu').width(), 10);
-         $('#secondmenu').prepend('<a id="cuore" style="color: #009999; font-family: Segoe UI, sans-serif;" href="http://www.efpfanfic.net/followed.php">&#9825;</a><div id="alert" style="display: none; position: absolute; color: #009999; background-color: #fff; padding: 5px; font-size: 10px; line-height: 14px; text-align: left; box-shadow: 0 0 3px 0 rgba(91, 146, 178, .5); border-radius: 3px; margin-top: 5px; width: ' + menuWidth + 'px;">' + alert + '</div>');
-         $('#cuore').hover(function() {
-            $('#alert').slideToggle(400);
+            return false;
          });
-      }
+         if (diff) alert += `<b>${s[0]}</b> ha ${diff} ${diff > 1 ? 'nuovi capitoli' : 'nuovo capitolo'}.<br>`;
+      });
+      // se si sono aggiunte storie e non sono state salvate
+      if (current.length > saved.length) alert += "Hai nuove storie non salvate.";
    }
 
-})(jQuery);
+})();
