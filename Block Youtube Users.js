@@ -122,16 +122,16 @@ if (typeof GM == 'undefined') {
       #byu-notice-close { cursor: pointer; background: var(--yt-red); color: #fff; border-radius: .5em; padding: 0 .5em; }
    </style>`);
 
-   /* FIRST PAGE VIDEO */
+   /* VIDEO FIRST PAGE */
 
    if (Values.storageVideo && /\/watch/.test(window.location.href)) {
       let waitUserVideo = setInterval(() => {
          if ($(Where.userVideo).length) {
             clearInterval(waitUserVideo);
 
-            let video = $('#player video.video-stream.html5-main-video');
             let username = $(Where.userVideo).text().trim();
             if (ifMatch(username.toLowerCase())) {
+               let video = $('#player video.video-stream.html5-main-video');
                video.get(0).pause();
                video.get(0).currentTime = 0;
                let pausing = setInterval(() => {
@@ -267,7 +267,7 @@ if (typeof GM == 'undefined') {
          $(this).text('saved');
          search(true);
       }
-      setTimeout(() => $(this).text('save'), 1000);
+      setTimeout(() => $(this).text('save'), 2000);
    });
 
    // pause
