@@ -3,34 +3,17 @@
 // @namespace    https://github.com/Schegge
 // @description  Hide videos of blacklisted users/channels and comments
 // @icon         https://raw.githubusercontent.com/Schegge/Userscripts/master/images/BYUicon.png
-// @version      2.4.7
+// @version      2.4.8
 // @author       Schegge
-// @match        *://*.youtube.com/*
+// @match        https://www.youtube.com/*
 // @exclude      *://*.youtube.com/embed/*
-// @exclude      *://*.youtube.com/live_chat?*
+// @exclude      *://*.youtube.com/live_chat*
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        GM.getValue
 // @grant        GM.setValue
 // @require      https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js
 // ==/UserScript==
-
-/** DESCRIPTION
-- it is not case-sensitive
-- it hides videos of blacklisted users/channels from home, search, related, and comments
- - also from the playlists, but it doesn't prevent them from playing if the playlist is in autoplay
-- put a * in front of a word for wildcard (only in the blacklist), it will find the word no matter its position in the username (example: *news)
- - when you use it, but you want a channel that has that word in the name, you can put it in the whitelist (example -> blacklist: *news; whitelist: euronews (in english))
-- you can choose the symbol to split the usernames (default is a comma, * and " aren't allowed, min-max 1 character)
-- you can choose the duration of the time interval in which the script checks for new elements on the page (default is 1000 milliseconds, min 500)
- - reload the page after saving to set the new interval
-- you can enable/disable hiding comments (after saving you have to reload the page)
-- you can blacklist channels by right clicking on '[x]' before the usernames (you can enable/disable it)
- - in any case, the [x] buttons are automatically shown when the "B" menu is open
-- from a direct link to youtube, it pauses the video if it's blacklisted (you can enable/disable it)
-- you can temporarily pause the blacklist (to reactivate it, just re-click on it or reload the page)
-- remember to save after any changes in the menu
-**/
 
 // gm4 polyfill https://github.com/greasemonkey/gm4-polyfill
 if (typeof GM == 'undefined') {
@@ -88,7 +71,7 @@ if (typeof GM == 'undefined') {
       // video playlist: #byline.ytd-playlist-panel-video-renderer
       // comment: #author-text span.ytd-comment-renderer, #name #text.ytd-channel-name
       user: `#metadata #text.ytd-channel-name, #channel-info #text.ytd-channel-name, #channel-title.ytd-channel-renderer span.ytd-channel-renderer, #info #text.ytd-channel-name, #byline.ytd-playlist-panel-video-renderer${Values.storageComment ? ', #author-text span.ytd-comment-renderer, #name #text.ytd-channel-name' : ''}`,
-      renderer: `ytd-rich-item-renderer, ytd-video-renderer, ytd-channel-renderer, ytd-playlist-renderer, ytd-movie-renderer, ytd-compact-video-renderer, ytd-compact-radio-renderer, ytd-compact-autoplay-renderer, ytd-compact-playlist-renderer, ytd-playlist-video-renderer, ytd-grid-video-renderer, ytd-grid-playlist-renderer, ytd-playlist-panel-video-renderer, ytd-secondary-search-container-renderer${Values.storageComment ? ', ytd-comment-thread-renderer' : ''}`,
+      renderer: `ytd-rich-item-renderer, ytd-video-renderer, ytd-channel-renderer, ytd-playlist-renderer, ytd-movie-renderer, ytd-compact-video-renderer, ytd-compact-radio-renderer, ytd-compact-autoplay-renderer, ytd-compact-playlist-renderer, ytd-playlist-video-renderer, ytd-grid-video-renderer, ytd-grid-playlist-renderer, ytd-playlist-panel-video-renderer, ytd-secondary-search-container-renderer${Values.storageComment ? ', ytd-comment-renderer.ytd-comment-replies-renderer, ytd-comment-thread-renderer' : ''}`,
       userVideo: '#upload-info #channel-name #text.ytd-channel-name'
    };
 
@@ -101,12 +84,12 @@ if (typeof GM == 'undefined') {
 
    $('head').append(`<style>
       #byu-is-black { display: none!important; }
-      .byu-add { font-size: .8em; margin-right: .5em; cursor: pointer; color: var(--yt-red); font-family: consolas, monospace; float: left; }
+      .byu-add { font-size: .8em; margin-right: .5em; cursor: pointer; color: var(--yt-brand-youtube-red, red); font-family: consolas, monospace; float: left; }
       #byu-icon { display: inline-block; position: relative; text-align: center; width: 40px; height: 24px; margin: 0 8px; font-weight: 500; }
       #byu-icon span { color: var(--yt-spec-icon-active-other); cursor: pointer; font-size: 20px; vertical-align: middle; }
       #byu-options { width: 30%; max-width: 250px; display: flex; flex-flow: row wrap; align-items: baseline; position: fixed; right: 10px; padding: 0 15px 15px; text-align: center; color: var(--yt-spec-text-primary); background-color: var(--yt-spec-brand-background-primary); border: 1px solid var(--yt-spec-10-percent-layer); border-top: 0; z-index: 99999; }
       #byu-options div { width: 50%; flex-grow: 1; box-sizing: border-box; padding: 5px; font-size: 1em; }
-      #byu-save { font-size: 1.5em!important; font-weight: bold; cursor: pointer; color: var(--yt-red); }
+      #byu-save { font-size: 1.5em!important; font-weight: bold; cursor: pointer; color: var(--yt-brand-youtube-red, red); }
       #byu-pause { cursor: pointer; }
       #byu-options .byu-textarea { width: 100%; }
       #byu-options .byu-textarea span { font-size: 1.2em; width: 100%; text-align: center; font-weight: bold; }
@@ -117,9 +100,9 @@ if (typeof GM == 'undefined') {
       #byu-options .byu-opt input { color: var(--yt-spec-text-primary); background-color: var(--yt-spec-brand-background-primary); border: 3px solid var(--ytd-searchbox-legacy-border-color); padding: 0 2px; height: 1.4em; line-height: 1em; vertical-align: middle; box-sizing: border-box;  margin: 0; }
       #byu-sep { width: 1em; }
       #byu-timer { width: 4.2em; }
-      #byu-video-page-black { position: fixed; z-index: 99999; bottom: 2em; left: 2em; width: 20%; min-width: 10em; font-size: 1.5em; padding: 1em; background: var(--yt-red); color: #fff; border-radius: .5em; }
-      #byu-notice { position: fixed; z-index: 99999; bottom: 2em; right: 2em; width: 30%; min-width: 10em; font-size: 1.2em; padding: 1.5em; color: var(--yt-red); background: #fff; border-radius: .5em; border: 1px solid var(--yt-red); }
-      #byu-notice-close { cursor: pointer; background: var(--yt-red); color: #fff; border-radius: .5em; padding: 0 .5em; }
+      #byu-video-page-black { position: fixed; z-index: 99999; bottom: 2em; left: 2em; width: 20%; min-width: 10em; font-size: 1.5em; padding: 1em; background: var(--yt-brand-youtube-red, red); color: #fff; border-radius: .5em; }
+      #byu-notice { position: fixed; z-index: 99999; bottom: 2em; right: 2em; width: 30%; min-width: 10em; font-size: 1.2em; padding: 1.5em; color: var(--yt-brand-youtube-red, red); background: #fff; border-radius: .5em; border: 1px solid var(--yt-brand-youtube-red, red); }
+      #byu-notice-close { cursor: pointer; background: var(--yt-brand-youtube-red, red); color: #fff; border-radius: .5em; padding: 0 .5em; }
    </style>`);
 
    /* VIDEO FIRST PAGE */
@@ -176,11 +159,13 @@ if (typeof GM == 'undefined') {
 
    /* NEW VERSION NOTIFICATION */
 
-   if (Values.storageVer !== '2.4.7') {
-      Values.storageVer = '2.4.7';
+   if (Values.storageVer !== '2.4.8') {
+      Values.storageVer = '2.4.8';
       GM.setValue('byuver', Values.storageVer);
-      $('body').append(`<div id="byu-notice">BLOCK YOUTUBE USERS [${Values.storageVer}]<br><br>- You can now choose the duration of the time interval in which the script checks for new videos on the page (default is 1000 milliseconds, min 500).<br>- You can now enable/disable hiding comments of blacklisted users (default is false).<br><br><span id="byu-notice-close">close</span></div>`);
-      $('#byu-notice-close').on('click', () => $('#byu-notice').remove());
+      /*
+         $('body').append(`<div id="byu-notice">BLOCK YOUTUBE USERS [${Values.storageVer}]<br><br> -- <br><br><span id="byu-notice-close">close</span></div>`);
+         $('#byu-notice-close').on('click', () => $('#byu-notice').remove());
+      */
    }
 
    /* BLACKLISTING FUNCTIONS */
