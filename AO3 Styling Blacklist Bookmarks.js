@@ -3,10 +3,10 @@
 // @namespace    https://github.com/Schegge
 // @description  Change font, size, width and background of a work + blacklist: hide works that contain certains tags or text, have too many tags/fandoms/relations/chapters/words and other options + fullscreen reading mode + bookmarks: save the position you stopped reading a fic + number of words for each chapter and estimated reading time
 // @icon         https://raw.githubusercontent.com/Schegge/Userscripts/master/images/ao3icon.png
-// @version      3.6
+// @version      3.6.1
 // @author       Schegge
 // @match        *://archiveofourown.org/*
-// @match        *://*.archiveofourown.org/*
+// @match        *://www.archiveofourown.org/*
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        GM.getValue
@@ -36,8 +36,8 @@ if (typeof GM == 'undefined') {
    const Check = {
       // script version
       version: async function() {
-         if (await getStorage('version', '1') !== 36) {
-            setStorage('version', 36);
+         if (await getStorage('version', '1') !== 361) {
+            setStorage('version', 361);
             return true;
          }
          return false;
@@ -58,14 +58,7 @@ if (typeof GM == 'undefined') {
 
    // new version check
    if (await Check.version()) {
-      // retrieve saved value from localstorage if they exist
-      if (localStorage.getItem(`ficstyle_feature`)) await GM.setValue('feature', localStorage.getItem(`ficstyle_feature`))
-      if (localStorage.getItem(`ficstyle_styling`)) await GM.setValue('styling', localStorage.getItem(`ficstyle_styling`))
-      if (localStorage.getItem(`ficstyle_bookmarks`)) await GM.setValue('bookmarks', localStorage.getItem(`ficstyle_bookmarks`))
-      if (localStorage.getItem(`ficstyle_blacklist`)) await GM.setValue('blacklistTags', localStorage.getItem(`ficstyle_blacklist`))
-      if (localStorage.getItem(`ficstyle_blacklist_opts`)) await GM.setValue('blacklistOpts', localStorage.getItem(`ficstyle_blacklist_opts`))
-      // notification
-      document.body.insertAdjacentHTML('beforeend', `<div style="position: fixed; bottom: 3em; right: 3em; width: 35%; z-index: 999; font-size: .9em; background: #fff; padding: 1em; border: 1px solid #900;"><b>AO3: Fic's Style, Blacklist, Bookmarks</b> UPDATES (v3.6)<br><br>You can now blacklist works that have too many <b>tags</b>, have a number of <b>chapters</b> below what you set for it, and contain certain words or phrases in the <b>title</b> and in the <b>summary</b>.<br>I've changed how to blacklist <b>authors</b>, if you were hiding someone, you have to move them in the new designated area without the @.<br><br>I've moved your saved values from the browser local storage to the userscript manager storage, there shouldn't be any loss on your part, if otherwise please contact me on greasyfork, they aren't lost.<br><br><a target="_blanket" href="https://greasyfork.org/en/scripts/10944-ao3-fic-s-style-blacklist-bookmarks">More info.</a><br><br><span id="${SN}-close" style="cursor: pointer; color: #900;">close</span>`);
+      document.body.insertAdjacentHTML('beforeend', `<div style="position: fixed; bottom: 3em; right: 3em; width: 35%; z-index: 999; font-size: .9em; background: #fff; padding: 1em; border: 1px solid #900;"><b>AO3: Fic's Style, Blacklist, Bookmarks</b> UPDATES (v3.6.1)<br><br><b>Styling</b>: You can now choose the text alignment.<br><br><span id="${SN}-close" style="cursor: pointer; color: #900;">close</span>`);
       document.getElementById(`${SN}-close`).addEventListener('click', function() { this.parentElement.style.display = 'none'; });
    }
 
@@ -260,7 +253,7 @@ if (typeof GM == 'undefined') {
       if (Feature.style) {
          addCSS(`${SN}-generalstyle`,
             `#main div.wrapper { margin-bottom: 1em; }
-            #workskin { margin: 0; text-align: justify; max-width: none!important; }
+            #workskin { margin: 0; max-width: none!important; }
             #workskin .notes, #workskin .summary, blockquote { font-size: inherit; font-family: inherit; }
             .preface a, #chapters a, .preface a:link, #chapters a:link, .preface a:visited, #chapters a:visited, .preface a:visited:hover, #chapters a:visited:hover { color: inherit !important; }
             .actions { font-family: 'Lucida Grande', 'Lucida Sans Unicode', 'GNU Unifont', Verdana, Helvetica, sans-serif; font-size: 14px; }
@@ -277,8 +270,7 @@ if (typeof GM == 'undefined') {
             h3.title a { border: 0; font-style: italic; }
             div.preface .associations, .preface .notes h3+p { margin-bottom: 0; font-style: italic; font-size: .8em; }
             #workskin #chapters, #workskin #chapters .userstuff { width: 100%!important; box-sizing: border-box; }
-            #workskin #chapters .userstuff p { font-family: inherit; text-align: justify; }
-            #workskin #chapters .userstuff { font-family: inherit; text-align: justify; }
+            #workskin #chapters .userstuff, #workskin #chapters .userstuff p { font-family: inherit; }
             #workskin #chapters .userstuff br { display: block; margin-top: .6em; content: " "; }
             .userstuff hr { width: 100%; height: 2px; border: 0; margin: 1.5em 0; background-image: linear-gradient(90deg, transparent, rgba(0, 0, 0, .2), transparent), linear-gradient(90deg, transparent, rgba(255, 255, 255, .3), transparent); }
             #workskin #chapters .userstuff blockquote { padding-top: 1px; padding-bottom: 1px; margin: 0 .5em; font-size: inherit; }
@@ -290,14 +282,16 @@ if (typeof GM == 'undefined') {
             opts: {
                fontName: 'Default',
                colors: 'light',
+               textAlign: 'justify',
                fontSize: '100',
                margins: '7',
                lineSpacing: '5'
             },
             inputs: [
-               // 0:css/id, 1:name, 2+:options
+               // 0:id, 1:name, 2+:options
                ['fontName', 'Font', 'Default', 'Arial Black', 'Helvetica', 'Verdana', 'Segoe UI', 'Garamond', 'Georgia', 'Times New Roman', 'Consolas', 'Courier'],
                ['colors', 'Background', 'light', 'grey', 'sepia', 'dark', 'darkblue', 'black'],
+               ['textAlign', 'Alignment', 'justify', 'left', 'center', 'right'],
                ['fontSize', 'Text Size', 100, 50, 300],
                ['margins', 'Page Margins', 7, 5, 40],
                ['lineSpacing', 'Line Spacing', 5, 3, 10]
@@ -330,8 +324,9 @@ if (typeof GM == 'undefined') {
             setValues: function() {
                setStorage('styling', this.opts);
                addCSS(`${SN}-userstyle`,
-                  `#workskin { font-family: ${this.fonts[this.opts.fontName]}; font-size: ${this.opts.fontSize}%; padding: 0 ${this.opts.margins}%; color: ${this.colors[this.opts.colors][1]}; background-color: ${this.colors[this.opts.colors][0]}; }
-                  #workskin #chapters .userstuff p { line-height: ${this.opts.lineSpacing * 0.3}em; margin: ${this.opts.lineSpacing * 0.5 - 1.4}em auto; } #workskin #chapters .userstuff { line-height: ${this.opts.lineSpacing * 0.3}em; }`
+                  `#workskin { font-family: ${this.fonts[this.opts.fontName]}; font-size: ${this.opts.fontSize}%; padding: 0 ${this.opts.margins}%; color: ${this.colors[this.opts.colors][1]}; background-color: ${this.colors[this.opts.colors][0]}; text-align: ${this.opts.textAlign}; }
+                  #workskin #chapters .userstuff { line-height: ${this.opts.lineSpacing * 0.3}em; text-align: ${this.opts.textAlign}; }
+                  #workskin #chapters .userstuff p { line-height: ${this.opts.lineSpacing * 0.3}em; margin: ${this.opts.lineSpacing * 0.5 - 1.4}em auto; text-align: ${this.opts.textAlign}; }`
                );
             },
             html: function() {
