@@ -3,7 +3,7 @@
 // @namespace    https://github.com/Schegge
 // @description  Change font, size, width and background of a work + blacklist: hide works that contain certains tags or text, have too many tags/fandoms/relations/chapters/words and other options + fullscreen reading mode + bookmarks: save the position you stopped reading a fic + number of words for each chapter and estimated reading time
 // @icon         https://raw.githubusercontent.com/Schegge/Userscripts/master/images/ao3icon.png
-// @version      3.6.1
+// @version      3.6.1.1
 // @author       Schegge
 // @match        *://archiveofourown.org/*
 // @match        *://www.archiveofourown.org/*
@@ -36,8 +36,8 @@ if (typeof GM == 'undefined') {
    const Check = {
       // script version
       version: async function() {
-         if (await getStorage('version', '1') !== 361) {
-            setStorage('version', 361);
+         if (await getStorage('version', '1') !== 3611) {
+            setStorage('version', 3611);
             return true;
          }
          return false;
@@ -58,8 +58,10 @@ if (typeof GM == 'undefined') {
 
    // new version check
    if (await Check.version()) {
-      document.body.insertAdjacentHTML('beforeend', `<div style="position: fixed; bottom: 3em; right: 3em; width: 35%; z-index: 999; font-size: .9em; background: #fff; padding: 1em; border: 1px solid #900;"><b>AO3: Fic's Style, Blacklist, Bookmarks</b> UPDATES (v3.6.1)<br><br><b>Styling</b>: You can now choose the text alignment.<br><br><span id="${SN}-close" style="cursor: pointer; color: #900;">close</span>`);
-      document.getElementById(`${SN}-close`).addEventListener('click', function() { this.parentElement.style.display = 'none'; });
+      /*
+         document.body.insertAdjacentHTML('beforeend', `<div style="position: fixed; bottom: 3em; right: 3em; width: 35%; z-index: 999; font-size: .9em; background: #fff; padding: 1em; border: 1px solid #900;"><b>AO3: Fic's Style, Blacklist, Bookmarks</b> UPDATES (v3.6.1.1)<br><br> <br><br><span id="${SN}-close" style="cursor: pointer; color: #900;">close</span>`);
+         document.getElementById(`${SN}-close`).addEventListener('click', function() { this.parentElement.style.display = 'none'; });
+      */
    }
 
 
@@ -98,7 +100,7 @@ if (typeof GM == 'undefined') {
       #${SN}-style { position: fixed; bottom: 0; right: 0; margin: 0 .5em .8em 0; padding: 0; border-radius: .3em; background-color: transparent; text-align: right; font-size: .9em; z-index: 999; }
       #${SN}-style:not(.${SN}-style-hide) { width: 25em; }
       #${SN}-style.${SN}-style-hide > div { display: none; }
-      #${SN}-style > div { background-color: #ddd;  padding: 0 .5em; box-shadow: 1px 1px 3px -1px #444; margin: 0; border-radius: .2em; }
+      #${SN}-style > div { color: #000; background-color: #ddd;  padding: 0 .5em; box-shadow: 1px 1px 3px -1px #444; margin: 0; border-radius: .2em; }
       #${SN}-style label { display: block; border-bottom: 1px solid #888; padding: .2em 0; margin: 0; }
       #${SN}-style input, #${SN}-style select { width: 50%; padding: 0; margin: 0 0 0 1em; vertical-align: middle; }
       #${SN}-style button { margin: .3em .2em; }

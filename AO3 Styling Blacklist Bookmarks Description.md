@@ -8,7 +8,7 @@
 - **Blacklist**
 - **Words per minute**
 
-   ![Words](https://i.imgur.com/LR7aTNM.png)
+   - ![Words](https://i.imgur.com/LR7aTNM.png)
    - The *estimated reading time* for the entire fanfiction and each chapter is calculated based on the number you set for it (default is 250; put 0 (zero) to disable it).
  
 - Disabling the features *doesn't* erase the values saved previously
@@ -75,6 +75,11 @@
  
 - You can hide works that aren't in your specified **languages**. To disable the option leave it empty.
 - You can hide works that have too many **relationships** and **fandoms**, or that have too few or too many **words** (in *thousands*, so if you put "5" it refers to 5k words) and **chapters**, or **incompleted** works that have been last updated *some months* ago. To disable the options put 0 (zero) or leave them empty.
+
+---
+
+### Known bugs and issues
+- If you use the 'Reversi' site skin the text in the blacklist menu isn't visible. To fix it add to the css `.dropdown-menu {color: #eee;}`
 
 ---
 
