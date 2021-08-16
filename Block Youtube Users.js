@@ -3,7 +3,7 @@
 // @namespace    https://github.com/Schegge
 // @description  Hide videos of blacklisted users/channels and comments
 // @icon         https://raw.githubusercontent.com/Schegge/Userscripts/master/images/BYUicon.png
-// @version      2.4.8
+// @version      2.4.9
 // @author       Schegge
 // @match        https://www.youtube.com/*
 // @exclude      *://*.youtube.com/embed/*
@@ -69,10 +69,11 @@ if (typeof GM == 'undefined') {
       // search video: #channel-info #text.ytd-channel-name
       // search channel: #channel-title.ytd-channel-renderer span.ytd-channel-renderer, #info #text.ytd-channel-name
       // video playlist: #byline.ytd-playlist-panel-video-renderer
+      // user video: #meta #upload-info #channel-name #text.ytd-channel-name
       // comment: #author-text span.ytd-comment-renderer, #name #text.ytd-channel-name
-      user: `#metadata #text.ytd-channel-name, #channel-info #text.ytd-channel-name, #channel-title.ytd-channel-renderer span.ytd-channel-renderer, #info #text.ytd-channel-name, #byline.ytd-playlist-panel-video-renderer${Values.storageComment ? ', #author-text span.ytd-comment-renderer, #name #text.ytd-channel-name' : ''}`,
+      user: `#metadata #text.ytd-channel-name, #channel-info #text.ytd-channel-name, #channel-title.ytd-channel-renderer span.ytd-channel-renderer, #info #text.ytd-channel-name, #byline.ytd-playlist-panel-video-renderer, #meta #upload-info #channel-name #text.ytd-channel-name${Values.storageComment ? ', #author-text span.ytd-comment-renderer, #name #text.ytd-channel-name' : ''}`,
       renderer: `ytd-rich-item-renderer, ytd-video-renderer, ytd-channel-renderer, ytd-playlist-renderer, ytd-movie-renderer, ytd-compact-video-renderer, ytd-compact-radio-renderer, ytd-compact-autoplay-renderer, ytd-compact-playlist-renderer, ytd-playlist-video-renderer, ytd-grid-video-renderer, ytd-grid-playlist-renderer, ytd-playlist-panel-video-renderer, ytd-secondary-search-container-renderer${Values.storageComment ? ', ytd-comment-renderer.ytd-comment-replies-renderer, ytd-comment-thread-renderer' : ''}`,
-      userVideo: '#upload-info #channel-name #text.ytd-channel-name'
+      userVideo: '#meta #upload-info #channel-name #text.ytd-channel-name'
    };
 
    /* INTERVAL FOR BLACKLISTING */
@@ -159,8 +160,8 @@ if (typeof GM == 'undefined') {
 
    /* NEW VERSION NOTIFICATION */
 
-   if (Values.storageVer !== '2.4.8') {
-      Values.storageVer = '2.4.8';
+   if (Values.storageVer !== '2.4.9') {
+      Values.storageVer = '2.4.9';
       GM.setValue('byuver', Values.storageVer);
       /*
          $('body').append(`<div id="byu-notice">BLOCK YOUTUBE USERS [${Values.storageVer}]<br><br> -- <br><br><span id="byu-notice-close">close</span></div>`);
@@ -271,11 +272,14 @@ if (typeof GM == 'undefined') {
    $('body').on('click contextmenu', '.byu-add', function(e) {
       e.preventDefault();
       e.stopPropagation();
-      Values.storageBlacklist.push($(this).next().data('username'));
-      let blacks = Values.storageBlacklist.join(`${Values.storageSep} `);
-      $('#byu-blacklist').val(blacks);
-      GM.setValue('savedblocks', blacks);
-      search(true);
+      let username = $(this).next().data('username');
+      if (!Values.storageBlacklist.includes(username)) {
+         Values.storageBlacklist.push(username);
+         let blacks = Values.storageBlacklist.join(`${Values.storageSep} `);
+         $('#byu-blacklist').val(blacks);
+         GM.setValue('savedblocks', blacks);
+         search(true);
+      }
    });
 
 })(jQuery);
