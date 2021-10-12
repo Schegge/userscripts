@@ -3,7 +3,7 @@
 // @namespace    https://github.com/Schegge
 // @description  Change font, size, width and background of a work + blacklist: hide works that contain certains tags or text, have too many tags/fandoms/relations/chapters/words and other options + fullscreen reading mode + bookmarks: save the position you stopped reading a fic + number of words for each chapter and estimated reading time
 // @icon         https://raw.githubusercontent.com/Schegge/Userscripts/master/images/ao3icon.png
-// @version      3.6.1.1
+// @version      3.6.1.2
 // @author       Schegge
 // @match        *://archiveofourown.org/*
 // @match        *://www.archiveofourown.org/*
@@ -36,8 +36,8 @@ if (typeof GM == 'undefined') {
    const Check = {
       // script version
       version: async function() {
-         if (await getStorage('version', '1') !== 3611) {
-            setStorage('version', 3611);
+         if (await getStorage('version', '1') !== 3612) {
+            setStorage('version', 3612);
             return true;
          }
          return false;
@@ -80,7 +80,7 @@ if (typeof GM == 'undefined') {
    addCSS(`${SN}-menus`,
       `li[id|="${SN}"] a { cursor: pointer; }
       li[id|="${SN}"] .dropdown-menu li a.${SN}-save { color: #900!important; font-weight: bold; text-align: center; padding-bottom: 0.75em!important; }
-      li[id|="${SN}"] .dropdown-menu input[type="number"], li[id |= "${SN}"] .dropdown-menu input[type="text"] { width: 3em; padding: 0 0 0 .2em; margin: 0; background: #fff; }
+      li[id|="${SN}"] .dropdown-menu input[type="number"], li[id |= "${SN}"] .dropdown-menu input[type="text"] { width: 3.5em; padding: 0 0 0 .2em; margin: 0; background: #fff; }
       li[id|="${SN}"] .dropdown-menu input[type="checkbox"] { margin: 0; }
       li[id|="${SN}"] .dropdown-menu textarea { font-size: .9em; line-height: 1.2em; min-height: 4em; padding: .3em; margin: .1em .5em; width: calc(100% - 1em); box-sizing: border-box; resize: vertical; }
       li[id|="${SN}"] .${SN}-opts { display: flex!important; flex-wrap: nowrap; align-items: center; }
@@ -293,7 +293,7 @@ if (typeof GM == 'undefined') {
                // 0:id, 1:name, 2+:options
                ['fontName', 'Font', 'Default', 'Arial Black', 'Helvetica', 'Verdana', 'Segoe UI', 'Garamond', 'Georgia', 'Times New Roman', 'Consolas', 'Courier'],
                ['colors', 'Background', 'light', 'grey', 'sepia', 'dark', 'darkblue', 'black'],
-               ['textAlign', 'Alignment', 'justify', 'left', 'center', 'right'],
+               ['textAlign', 'Alignment', 'default', 'justify', 'left', 'center', 'right'],
                ['fontSize', 'Text Size', 100, 50, 300],
                ['margins', 'Page Margins', 7, 5, 40],
                ['lineSpacing', 'Line Spacing', 5, 3, 10]
@@ -326,9 +326,9 @@ if (typeof GM == 'undefined') {
             setValues: function() {
                setStorage('styling', this.opts);
                addCSS(`${SN}-userstyle`,
-                  `#workskin { font-family: ${this.fonts[this.opts.fontName]}; font-size: ${this.opts.fontSize}%; padding: 0 ${this.opts.margins}%; color: ${this.colors[this.opts.colors][1]}; background-color: ${this.colors[this.opts.colors][0]}; text-align: ${this.opts.textAlign}; }
-                  #workskin #chapters .userstuff { line-height: ${this.opts.lineSpacing * 0.3}em; text-align: ${this.opts.textAlign}; }
-                  #workskin #chapters .userstuff p { line-height: ${this.opts.lineSpacing * 0.3}em; margin: ${this.opts.lineSpacing * 0.5 - 1.4}em auto; text-align: ${this.opts.textAlign}; }`
+                  `#workskin { font-family: ${this.fonts[this.opts.fontName]}; font-size: ${this.opts.fontSize}%; padding: 0 ${this.opts.margins}%; color: ${this.colors[this.opts.colors][1]}; background-color: ${this.colors[this.opts.colors][0]}; ${this.opts.textAlign === 'default' ? '' :`text-align: ${this.opts.textAlign};`} }
+                  #workskin #chapters .userstuff { line-height: ${this.opts.lineSpacing * 0.3}em; ${this.opts.textAlign === 'default' ? '' :`text-align: ${this.opts.textAlign};`} }
+                  #workskin #chapters .userstuff p { line-height: ${this.opts.lineSpacing * 0.3}em; margin: ${this.opts.lineSpacing * 0.5 - 1.4}em auto; ${this.opts.textAlign === 'default' ? '' :`text-align: ${this.opts.textAlign};`} }`
                );
             },
             html: function() {
