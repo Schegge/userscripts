@@ -3,7 +3,7 @@
 // @namespace    https://github.com/Schegge
 // @description  Hide videos of blacklisted users/channels and comments
 // @icon         https://raw.githubusercontent.com/Schegge/Userscripts/master/images/BYUicon.png
-// @version      2.4.9
+// @version      2.4.9.1
 // @author       Schegge
 // @match        https://www.youtube.com/*
 // @exclude      *://*.youtube.com/embed/*
@@ -86,7 +86,7 @@ if (typeof GM == 'undefined') {
    $('head').append(`<style>
       #byu-is-black { display: none!important; }
       .byu-add { font-size: .8em; margin-right: .5em; cursor: pointer; color: var(--yt-brand-youtube-red, red); font-family: consolas, monospace; float: left; }
-      #byu-icon { display: inline-block; position: relative; text-align: center; width: 40px; height: 24px; margin: 0 8px; font-weight: 500; }
+      #byu-icon { display: inline-block; position: relative; text-align: center; width: 40px; height: 24px; margin: 0 8px; font-weight: 100; }
       #byu-icon span { color: var(--yt-spec-icon-active-other); cursor: pointer; font-size: 20px; vertical-align: middle; }
       #byu-options { width: 30%; max-width: 250px; display: flex; flex-flow: row wrap; align-items: baseline; position: fixed; right: 10px; padding: 0 15px 15px; text-align: center; color: var(--yt-spec-text-primary); background-color: var(--yt-spec-brand-background-primary); border: 1px solid var(--yt-spec-10-percent-layer); border-top: 0; z-index: 99999; }
       #byu-options div { width: 50%; flex-grow: 1; box-sizing: border-box; padding: 5px; font-size: 1em; }
@@ -160,8 +160,8 @@ if (typeof GM == 'undefined') {
 
    /* NEW VERSION NOTIFICATION */
 
-   if (Values.storageVer !== '2.4.9') {
-      Values.storageVer = '2.4.9';
+   if (Values.storageVer !== '2.4.9.1') {
+      Values.storageVer = '2.4.9.1';
       GM.setValue('byuver', Values.storageVer);
       /*
          $('body').append(`<div id="byu-notice">BLOCK YOUTUBE USERS [${Values.storageVer}]<br><br> -- <br><br><span id="byu-notice-close">close</span></div>`);
@@ -223,7 +223,7 @@ if (typeof GM == 'undefined') {
    // open/close options
    $('body').on('click', '#byu-icon', function() {
       $('#byu-options').slideToggle();
-      $(this).css('font-weight', $(this).css('font-weight') === '700' ? '' : '700');
+      $(this).css('font-weight', $(this).css('font-weight') === '500' ? '' : '500');
       Values.menuOpen = !Values.menuOpen;
       if (!Values.storageAdd) {
          if (Values.menuOpen) search();

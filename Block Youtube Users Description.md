@@ -24,3 +24,7 @@
 - **right click add**: you can blacklist channels by *right clicking* on **\[x\]** before the usernames
 
    > in any case, the \[x\] buttons are automatically shown when the "B" menu is open
+
+### Known bugs and issues
+
+- It doesn't block channels that have the separator symbol in their names, either use a wildcard or change the separator symbol.
