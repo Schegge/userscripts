@@ -13,6 +13,7 @@
 
 - it is not case-sensitive
 - remember to **save** after any changes in the menu
+- you can open the menu either by clicking on "B" or when pressing ctrl+alt+b
 
 ## Options
 

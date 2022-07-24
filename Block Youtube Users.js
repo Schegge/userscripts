@@ -3,7 +3,7 @@
 // @namespace    https://github.com/Schegge
 // @description  Hide videos of blacklisted users/channels and comments
 // @icon         https://raw.githubusercontent.com/Schegge/Userscripts/master/images/BYUicon.png
-// @version      2.4.9.1
+// @version      2.4.9.2
 // @author       Schegge
 // @match        https://www.youtube.com/*
 // @exclude      *://*.youtube.com/embed/*
@@ -12,7 +12,7 @@
 // @grant        GM_setValue
 // @grant        GM.getValue
 // @grant        GM.setValue
-// @require      https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js
+// @require      https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js
 // ==/UserScript==
 
 // gm4 polyfill https://github.com/greasemonkey/gm4-polyfill
@@ -100,7 +100,7 @@ if (typeof GM == 'undefined') {
       #byu-options .byu-opt { text-align: right; padding-right: 2em; }
       #byu-options .byu-opt input { color: var(--yt-spec-text-primary); background-color: var(--yt-spec-brand-background-primary); border: 3px solid var(--ytd-searchbox-legacy-border-color); padding: 0 2px; height: 1.4em; line-height: 1em; vertical-align: middle; box-sizing: border-box;  margin: 0; }
       #byu-sep { width: 1em; }
-      #byu-timer { width: 4.2em; }
+      #byu-timer { width: 5em; }
       #byu-video-page-black { position: fixed; z-index: 99999; bottom: 2em; left: 2em; width: 20%; min-width: 10em; font-size: 1.5em; padding: 1em; background: var(--yt-brand-youtube-red, red); color: #fff; border-radius: .5em; }
       #byu-notice { position: fixed; z-index: 99999; bottom: 2em; right: 2em; width: 30%; min-width: 10em; font-size: 1.2em; padding: 1.5em; color: var(--yt-brand-youtube-red, red); background: #fff; border-radius: .5em; border: 1px solid var(--yt-brand-youtube-red, red); }
       #byu-notice-close { cursor: pointer; background: var(--yt-brand-youtube-red, red); color: #fff; border-radius: .5em; padding: 0 .5em; }
@@ -160,13 +160,11 @@ if (typeof GM == 'undefined') {
 
    /* NEW VERSION NOTIFICATION */
 
-   if (Values.storageVer !== '2.4.9.1') {
-      Values.storageVer = '2.4.9.1';
+   if (Values.storageVer !== '2.4.9.2') {
+      Values.storageVer = '2.4.9.2';
       GM.setValue('byuver', Values.storageVer);
-      /*
-         $('body').append(`<div id="byu-notice">BLOCK YOUTUBE USERS [${Values.storageVer}]<br><br> -- <br><br><span id="byu-notice-close">close</span></div>`);
-         $('#byu-notice-close').on('click', () => $('#byu-notice').remove());
-      */
+      $('body').append(`<div id="byu-notice">BLOCK YOUTUBE USERS [${Values.storageVer}]<br><br>- you can now open the menu when pressing ctrl+alt+b<br><br><span id="byu-notice-close">close</span></div>`);
+      $('#byu-notice-close').on('click', () => $('#byu-notice').remove());
    }
 
    /* BLACKLISTING FUNCTIONS */
@@ -221,15 +219,20 @@ if (typeof GM == 'undefined') {
    /* EVENT LISTENERS */
 
    // open/close options
-   $('body').on('click', '#byu-icon', function() {
+   $('body').on('click', '#byu-icon', openMenu);
+   $(document).bind('keydown', function(e) {
+      if (e.ctrlKey && e.altKey && e.key == 'b') openMenu(e);
+   });
+
+  function openMenu(e) {
       $('#byu-options').slideToggle();
-      $(this).css('font-weight', $(this).css('font-weight') === '500' ? '' : '500');
+      $('#byu-icon').css('font-weight', $('#byu-icon').css('font-weight') === '500' ? '' : '500');
       Values.menuOpen = !Values.menuOpen;
       if (!Values.storageAdd) {
          if (Values.menuOpen) search();
          else $('.byu-add').remove();
       }
-   });
+   }
 
    // save changes
    $('#byu-save').on('click', function() {
