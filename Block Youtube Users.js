@@ -3,7 +3,7 @@
 // @namespace    https://github.com/Schegge
 // @description  Hide videos of blacklisted users/channels and comments
 // @icon         https://raw.githubusercontent.com/Schegge/Userscripts/master/images/BYUicon.png
-// @version      2.4.9.2
+// @version      2.4.9.3
 // @author       Schegge
 // @match        https://www.youtube.com/*
 // @exclude      *://*.youtube.com/embed/*
@@ -150,10 +150,12 @@ if (typeof GM == 'undefined') {
    </div>`);
 
    // for the B wait till the masthead buttons are added
+   let buttonB = $('<div id="byu-icon"><span>B</span></div>');
+
    let waitButton = setInterval(() => {
       if ($('#buttons').length) {
          clearInterval(waitButton);
-         $('#buttons').before('<div id="byu-icon"><span>B</span></div>');
+         $('#buttons').before(buttonB);
          $('head').append(`<style>#byu-options { top:${$('#container.ytd-masthead').height()}px; }</style>`);
       }
    }, 1000);
@@ -219,14 +221,14 @@ if (typeof GM == 'undefined') {
    /* EVENT LISTENERS */
 
    // open/close options
-   $('body').on('click', '#byu-icon', openMenu);
+   $(buttonB).on('click', openMenu);
    $(document).bind('keydown', function(e) {
-      if (e.ctrlKey && e.altKey && e.key == 'b') openMenu(e);
+      if (e.ctrlKey && e.altKey && e.key == 'b') openMenu();
    });
 
-  function openMenu(e) {
+  function openMenu() {
       $('#byu-options').slideToggle();
-      $('#byu-icon').css('font-weight', $('#byu-icon').css('font-weight') === '500' ? '' : '500');
+      $(buttonB).css('font-weight', $(buttonB).css('font-weight') === '500' ? '' : '500');
       Values.menuOpen = !Values.menuOpen;
       if (!Values.storageAdd) {
          if (Values.menuOpen) search();
