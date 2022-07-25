@@ -3,7 +3,7 @@
 // @namespace    https://github.com/Schegge
 // @description  Hide videos of blacklisted users/channels and comments
 // @icon         https://raw.githubusercontent.com/Schegge/Userscripts/master/images/BYUicon.png
-// @version      2.4.9.3
+// @version      2.5
 // @author       Schegge
 // @match        https://www.youtube.com/*
 // @exclude      *://*.youtube.com/embed/*
@@ -69,10 +69,10 @@ if (typeof GM == 'undefined') {
       // search video: #channel-info #text.ytd-channel-name
       // search channel: #channel-title.ytd-channel-renderer span.ytd-channel-renderer, #info #text.ytd-channel-name
       // video playlist: #byline.ytd-playlist-panel-video-renderer
-      // user video: #meta #upload-info #channel-name #text.ytd-channel-name
       // comment: #author-text span.ytd-comment-renderer, #name #text.ytd-channel-name
-      user: `#metadata #text.ytd-channel-name, #channel-info #text.ytd-channel-name, #channel-title.ytd-channel-renderer span.ytd-channel-renderer, #info #text.ytd-channel-name, #byline.ytd-playlist-panel-video-renderer, #meta #upload-info #channel-name #text.ytd-channel-name${Values.storageComment ? ', #author-text span.ytd-comment-renderer, #name #text.ytd-channel-name' : ''}`,
-      renderer: `ytd-rich-item-renderer, ytd-video-renderer, ytd-channel-renderer, ytd-playlist-renderer, ytd-movie-renderer, ytd-compact-video-renderer, ytd-compact-radio-renderer, ytd-compact-autoplay-renderer, ytd-compact-playlist-renderer, ytd-playlist-video-renderer, ytd-grid-video-renderer, ytd-grid-playlist-renderer, ytd-playlist-panel-video-renderer, ytd-secondary-search-container-renderer${Values.storageComment ? ', ytd-comment-renderer.ytd-comment-replies-renderer, ytd-comment-thread-renderer' : ''}`,
+      // user video: #meta #upload-info #channel-name #text.ytd-channel-name, #owner #upload-info #channel-name #text.ytd-channel-name
+      user: `#metadata #text.ytd-channel-name, #channel-info #text.ytd-channel-name, #channel-title.ytd-channel-renderer span.ytd-channel-renderer, #info #text.ytd-channel-name, #byline.ytd-playlist-panel-video-renderer, #meta #upload-info #channel-name #text.ytd-channel-name, #owner #upload-info #channel-name #text.ytd-channel-name${Values.storageComment ? ', #author-text span.ytd-comment-renderer, #name #text.ytd-channel-name' : ''}`,
+      renderer: `ytd-rich-item-renderer, ytd-video-renderer, ytd-channel-renderer, ytd-playlist-renderer, ytd-movie-renderer, ytd-compact-video-renderer, ytd-compact-movie-renderer, ytd-compact-radio-renderer, ytd-compact-autoplay-renderer, ytd-compact-playlist-renderer, ytd-playlist-video-renderer, ytd-grid-video-renderer, ytd-grid-playlist-renderer, ytd-playlist-panel-video-renderer, ytd-secondary-search-container-renderer${Values.storageComment ? ', ytd-comment-renderer.ytd-comment-replies-renderer, ytd-comment-thread-renderer' : ''}`,
       userVideo: '#meta #upload-info #channel-name #text.ytd-channel-name'
    };
 
@@ -162,11 +162,11 @@ if (typeof GM == 'undefined') {
 
    /* NEW VERSION NOTIFICATION */
 
-   if (Values.storageVer !== '2.4.9.2') {
-      Values.storageVer = '2.4.9.2';
+   if (Values.storageVer !== '2.5') {
+      Values.storageVer = '2.5';
       GM.setValue('byuver', Values.storageVer);
-      $('body').append(`<div id="byu-notice">BLOCK YOUTUBE USERS [${Values.storageVer}]<br><br>- you can now open the menu when pressing ctrl+alt+b<br><br><span id="byu-notice-close">close</span></div>`);
-      $('#byu-notice-close').on('click', () => $('#byu-notice').remove());
+      /* $('body').append(`<div id="byu-notice">BLOCK YOUTUBE USERS [${Values.storageVer}]<br><br>--<br><br><span id="byu-notice-close">close</span></div>`);
+      $('#byu-notice-close').on('click', () => $('#byu-notice').remove()); */
    }
 
    /* BLACKLISTING FUNCTIONS */
@@ -274,7 +274,7 @@ if (typeof GM == 'undefined') {
    });
 
    // add usernames to blacklist
-   $('body').on('click contextmenu', '.byu-add', function(e) {
+   $(document).on('contextmenu', '.byu-add', function(e) {
       e.preventDefault();
       e.stopPropagation();
       let username = $(this).next().data('username');
