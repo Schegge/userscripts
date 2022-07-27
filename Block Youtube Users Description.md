@@ -28,5 +28,4 @@
 
 ### Known bugs and issues
 
-- Clicking on the "B" may not open the menu, you can open it by pressing ctrl+alt+b.
 - It doesn't block channels that have the separator symbol in their names, either use a wildcard or change the separator symbol.

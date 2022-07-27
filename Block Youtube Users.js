@@ -3,11 +3,12 @@
 // @namespace    https://github.com/Schegge
 // @description  Hide videos of blacklisted users/channels and comments
 // @icon         https://raw.githubusercontent.com/Schegge/Userscripts/master/images/BYUicon.png
-// @version      2.5
+// @version      2.5.1
 // @author       Schegge
 // @match        https://www.youtube.com/*
 // @exclude      *://*.youtube.com/embed/*
 // @exclude      *://*.youtube.com/live_chat*
+// @run-at       document-end
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        GM.getValue
@@ -162,8 +163,8 @@ if (typeof GM == 'undefined') {
 
    /* NEW VERSION NOTIFICATION */
 
-   if (Values.storageVer !== '2.5') {
-      Values.storageVer = '2.5';
+   if (Values.storageVer !== '2.5.1') {
+      Values.storageVer = '2.5.1';
       GM.setValue('byuver', Values.storageVer);
       /* $('body').append(`<div id="byu-notice">BLOCK YOUTUBE USERS [${Values.storageVer}]<br><br>--<br><br><span id="byu-notice-close">close</span></div>`);
       $('#byu-notice-close').on('click', () => $('#byu-notice').remove()); */
@@ -191,7 +192,7 @@ if (typeof GM == 'undefined') {
    function findMatch(user, newAdd) {
       // add [x] when menu is open or always add selected
       if ((Values.menuOpen || Values.storageAdd) && !user.siblings('.byu-add').length) {
-         $('<span class="byu-add">[x]</span>').insertBefore(user);
+         $('<div class="byu-add">[x]</div>').insertBefore(user);
       }
       // if blacklist is paused do nothing
       if (Values.menuPause) return;
@@ -274,7 +275,7 @@ if (typeof GM == 'undefined') {
    });
 
    // add usernames to blacklist
-   $(document).on('contextmenu', '.byu-add', function(e) {
+   $(document).on('contextmenu', 'div.byu-add', function(e) {
       e.preventDefault();
       e.stopPropagation();
       let username = $(this).next().data('username');
