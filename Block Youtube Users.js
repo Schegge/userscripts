@@ -3,7 +3,7 @@
 // @namespace    https://github.com/Schegge
 // @description  Hide videos of blacklisted users/channels and comments
 // @icon         https://raw.githubusercontent.com/Schegge/Userscripts/master/images/BYUicon.png
-// @version      2.5.1
+// @version      2.5.2
 // @author       Schegge
 // @match        https://www.youtube.com/*
 // @exclude      *://*.youtube.com/embed/*
@@ -33,6 +33,8 @@ if (typeof GM == 'undefined') {
 }
 
 (async function($) {
+
+   const TEST = false;
 
    /* VALUES */
 
@@ -89,17 +91,17 @@ if (typeof GM == 'undefined') {
       .byu-add { font-size: .8em; margin-right: .5em; cursor: pointer; color: var(--yt-brand-youtube-red, red); font-family: consolas, monospace; float: left; }
       #byu-icon { display: inline-block; position: relative; text-align: center; width: 40px; height: 24px; margin: 0 8px; font-weight: 100; }
       #byu-icon span { color: var(--yt-spec-icon-active-other); cursor: pointer; font-size: 20px; vertical-align: middle; }
-      #byu-options { width: 30%; max-width: 250px; display: flex; flex-flow: row wrap; align-items: baseline; position: fixed; right: 10px; padding: 0 15px 15px; text-align: center; color: var(--yt-spec-text-primary); background-color: var(--yt-spec-brand-background-primary); border: 1px solid var(--yt-spec-10-percent-layer); border-top: 0; z-index: 99999; }
-      #byu-options div { width: 50%; flex-grow: 1; box-sizing: border-box; padding: 5px; font-size: 1em; }
+      #byu-options { width: 30%; max-width: 250px; display: flex; flex-flow: row wrap; align-items: baseline; position: fixed; right: 10px; padding: 15px; text-align: center; color: var(--yt-spec-text-primary); background-color: var(--yt-spec-base-background); border: 1px solid var(--yt-spec-10-percent-layer); z-index: 99999; }
+      #byu-options div { width: 50%; flex-grow: 1; box-sizing: border-box; padding: 5px; font-size: .9em; }
       #byu-save { font-size: 1.5em!important; font-weight: bold; cursor: pointer; color: var(--yt-brand-youtube-red, red); }
       #byu-pause { cursor: pointer; }
       #byu-options .byu-textarea { width: 100%; }
       #byu-options .byu-textarea span { font-size: 1.2em; width: 100%; text-align: center; font-weight: bold; }
-      #byu-options .byu-textarea textarea { font-size: 1em; line-height: 1em; resize: vertical; width: 100%; padding: 4px; color: var(--yt-spec-text-primary); background-color: var(--yt-spec-brand-background-primary); box-sizing: border-box; border: 3px solid var(--ytd-searchbox-legacy-border-color); }
+      #byu-options .byu-textarea textarea { font-size: 1em; line-height: 1em; resize: vertical; width: 100%; padding: 4px; color: var(--yt-spec-text-primary); background-color: var(--yt-spec-badge-chip-background); box-sizing: border-box; border: 0; border-radius: 1em; }
       #byu-options .byu-textarea textarea#byu-blacklist { min-height: 6em; }
       #byu-options .byu-textarea textarea#byu-whiteklist { min-height: 4em; }
       #byu-options .byu-opt { text-align: right; padding-right: 2em; }
-      #byu-options .byu-opt input { color: var(--yt-spec-text-primary); background-color: var(--yt-spec-brand-background-primary); border: 3px solid var(--ytd-searchbox-legacy-border-color); padding: 0 2px; height: 1.4em; line-height: 1em; vertical-align: middle; box-sizing: border-box;  margin: 0; }
+      #byu-options .byu-opt input { color: var(--yt-spec-text-primary); background-color: var(--yt-spec-badge-chip-background); border: 0; padding: 0 2px; height: 1.6em; line-height: 1em; vertical-align: middle; box-sizing: border-box;  margin: 0; border-radius: .5em; }
       #byu-sep { width: 1em; }
       #byu-timer { width: 5em; }
       #byu-video-page-black { position: fixed; z-index: 99999; bottom: 2em; left: 2em; width: 20%; min-width: 10em; font-size: 1.5em; padding: 1em; background: var(--yt-brand-youtube-red, red); color: #fff; border-radius: .5em; }
@@ -163,8 +165,8 @@ if (typeof GM == 'undefined') {
 
    /* NEW VERSION NOTIFICATION */
 
-   if (Values.storageVer !== '2.5.1') {
-      Values.storageVer = '2.5.1';
+   if (Values.storageVer !== '2.5.2') {
+      Values.storageVer = '2.5.2';
       GM.setValue('byuver', Values.storageVer);
       /* $('body').append(`<div id="byu-notice">BLOCK YOUTUBE USERS [${Values.storageVer}]<br><br>--<br><br><span id="byu-notice-close">close</span></div>`);
       $('#byu-notice-close').on('click', () => $('#byu-notice').remove()); */
@@ -275,16 +277,34 @@ if (typeof GM == 'undefined') {
    });
 
    // add usernames to blacklist
-   $(document).on('contextmenu', 'div.byu-add', function(e) {
+   $(document).on('click contextmenu', '.byu-add', function(e) {
       e.preventDefault();
       e.stopPropagation();
+
+      if (TEST) {
+         console.log('BYU- YOU HAVE RIGHT-CLICKED ON [X]');
+         console.log('BYU- current # blacklist:', Values.storageBlacklist.length);
+         console.log('BYU- element:', $(this));
+      }
+
       let username = $(this).next().data('username');
+
+      if (TEST) {
+         console.log('BYU- username:', username);
+         console.log('BYU- username already in the blacklist?', Values.storageBlacklist.includes(username));
+      }
+
       if (!Values.storageBlacklist.includes(username)) {
          Values.storageBlacklist.push(username);
          let blacks = Values.storageBlacklist.join(`${Values.storageSep} `);
          $('#byu-blacklist').val(blacks);
          GM.setValue('savedblocks', blacks);
          search(true);
+      }
+
+      if (TEST) {
+         console.log('BYU- new # blacklist:', Values.storageBlacklist.length);
+         console.log('BYU- blacklist:', $('#byu-blacklist').val());
       }
    });
 

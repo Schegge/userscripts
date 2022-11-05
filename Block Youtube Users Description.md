@@ -1,5 +1,5 @@
 # BLOCK YOUTUBE USERS
-![BYU Menu](https://i.imgur.com/AHyoeAX.png)
+![BYU Menu](https://i.imgur.com/3dXr6eI.png)
 
 - it **hides** videos of blacklisted users/channels from home, search, related, and comments
    - also from the playlists, but it doesn't prevent them from playing if the playlist is in autoplay
@@ -29,3 +29,12 @@
 ### Known bugs and issues
 
 - It doesn't block channels that have the separator symbol in their names, either use a wildcard or change the separator symbol.
+
+- THE OPTION **right click add** MAY NOT WORK
+
+   > If it doesn't work for you, set line code #37 to true: `const TEST = true;`
+   >
+   > open your browser console and check if there's something similar to the image below after you right-click on [x]
+   >
+   > ![BYU Test](https://i.imgur.com/i1NExjn.png)
+
