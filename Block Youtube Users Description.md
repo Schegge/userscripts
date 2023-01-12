@@ -7,9 +7,9 @@
    - when you use it, but you want a channel that has that word in the name, you can put it in the *whitelist*
    - example:
 
-      > blacklist: \*news
-      >
-      > whitelist: euronews (in english)
+         > blacklist: \*news
+         >
+         > whitelist: euronews (in english)
 
 - it is not case-sensitive
 - remember to **save** after any changes in the menu
@@ -24,17 +24,13 @@
 - **pause video**: from a direct link to youtube, it pauses the video if it's blacklisted
 - **right click add**: you can blacklist channels by *right clicking* on **\[x\]** before the usernames
 
-   > in any case, the \[x\] buttons are automatically shown when the "B" menu is open
+      > in any case, the \[x\] buttons are automatically shown when the "B" menu is open
 
 ### Known bugs and issues
 
 - It doesn't block channels that have the separator symbol in their names, either use a wildcard or change the separator symbol.
 
-- THE OPTION **right click add** MAY NOT WORK
+- THE OPTION **right click add** MAY NOT WORK, or even in general
 
-   > If it doesn't work for you, set line code #37 to true: `const TEST = true;`
-   >
-   > open your browser console and check if there's something similar to the image below after you right-click on [x]
-   >
-   > ![BYU Test](https://i.imgur.com/i1NExjn.png)
+      > it probably means that youtube has changed its layout, until it changes for me too, I can't fix it
 
