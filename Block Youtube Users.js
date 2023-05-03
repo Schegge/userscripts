@@ -35,7 +35,7 @@ if (typeof GM == 'undefined') {
 (async function($) {
    /* VALUES */
 
-   const DEBUGGING = true;
+   const DEBUGGING = false;
 
    const Values = {
       storageVer: '1',
