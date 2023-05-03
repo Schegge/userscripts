@@ -3,7 +3,7 @@
 // @namespace    https://github.com/Schegge
 // @description  Hide videos of blacklisted users/channels and comments
 // @icon         https://raw.githubusercontent.com/Schegge/Userscripts/master/images/BYUicon.png
-// @version      2.5.3
+// @version      2.5.3.1
 // @author       Schegge
 // @match        https://www.youtube.com/*
 // @exclude      *://*.youtube.com/embed/*
@@ -35,6 +35,8 @@ if (typeof GM == 'undefined') {
 (async function($) {
    /* VALUES */
 
+   const DEBUGGING = true;
+
    const Values = {
       storageVer: '1',
       storageSep: ',',
@@ -58,6 +60,11 @@ if (typeof GM == 'undefined') {
    Values.storageBlacklist = getArray(await GM.getValue('savedblocks', ''));
    Values.storageWhitelist = getArray(await GM.getValue('savedwhites', ''));
 
+   if (DEBUGGING) {
+      console.log('BYU- current blacklist:', Values.storageBlacklist);
+      console.log('BYU- current whitelist:', Values.storageWhitelist);
+   }
+
    // get array from string
    function getArray(string) {
       if (!string) return [];
@@ -67,7 +74,7 @@ if (typeof GM == 'undefined') {
    const Where = {
       // home, related and page playlist: #metadata #text.ytd-channel-name
       // search video: #channel-info #text.ytd-channel-name
-      // search channel: #channel-title.ytd-channel-renderer span.ytd-channel-renderer, #info #text.ytd-channel-name
+      // search channel: #channel-title.ytd-channel-renderer span.ytd-channel-renderer, #info #text.ytd-channel-name, #metadata #subscribers.ytd-channel-renderer
       // video playlist: #byline.ytd-playlist-panel-video-renderer
       // user video: #meta #upload-info #channel-name #text.ytd-channel-name, #owner #upload-info #channel-name #text.ytd-channel-name
       // comment: #author-text span.ytd-comment-renderer, #name #text.ytd-channel-name
@@ -75,9 +82,9 @@ if (typeof GM == 'undefined') {
             #channel-info #text.ytd-channel-name,
             #channel-title.ytd-channel-renderer span.ytd-channel-renderer,
             #info #text.ytd-channel-name,
+            #metadata #subscribers.ytd-channel-renderer,
             #byline.ytd-playlist-panel-video-renderer,
-            #meta #upload-info #channel-name #text.ytd-channel-name,
-            #owner #upload-info #channel-name #text.ytd-channel-name
+            #meta #upload-info #channel-name #text.ytd-channel-name
             ${Values.storageComment ? ', #author-text span.ytd-comment-renderer, #name #text.ytd-channel-name' : ''}`,
 
       renderer: `ytd-rich-item-renderer,
@@ -209,8 +216,8 @@ if (typeof GM == 'undefined') {
 
    /* NEW VERSION NOTIFICATION */
 
-   if (Values.storageVer !== '2.5.3') {
-      Values.storageVer = '2.5.3';
+   if (Values.storageVer !== '2.5.3.1') {
+      Values.storageVer = '2.5.3.1';
       GM.setValue('byuver', Values.storageVer);
       /* $('body').append(`<div id="byu-notice">BLOCK YOUTUBE USERS [${Values.storageVer}]<br><br>--
       <br><br><span id="byu-notice-close">close</span></div>`);
@@ -247,6 +254,11 @@ if (typeof GM == 'undefined') {
          // hide if match
          if (ifMatch(username)) {
             user.closest(Where.renderer).attr('id', 'byu-is-black');
+
+            if (DEBUGGING) {
+               console.log('BYU- MATCHED USER', user, user.closest(Where.renderer));
+            }
+
             user.data('black', 'yes');
          // show if it was hidden with another username or deleted username from blacklist
          } else if (user.data('black')) {
@@ -339,6 +351,14 @@ if (typeof GM == 'undefined') {
       e.stopPropagation();
 
       let username = $(this).next().text().trim().toLowerCase();
+
+      if (DEBUGGING) {
+         console.log('BYU- YOU HAVE RIGHT-CLICKED ON [X]');
+         console.log('BYU- current # blacklist:', Values.storageBlacklist.length);
+         console.log('BYU- element:', $(this));
+         console.log('BYU- username:', username);
+         console.log('BYU- username already in the blacklist?', Values.storageBlacklist.includes(username));
+      }
 
       if (!Values.storageBlacklist.includes(username)) {
          Values.storageBlacklist.push(username);
